@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
-import { ChartLine, Building, Download, Settings, Wallet } from "lucide-react";
+import { ChartLine, Building, Download, Settings, Wallet, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type Module = "general" | "real-estate";
+type Module = "general" | "real-estate" | "devices";
 
 interface SidebarProps {
   activeModule: Module;
@@ -22,6 +22,11 @@ export default function Sidebar({ activeModule, onModuleChange, isOpen, onToggle
       id: "real-estate" as const,
       label: "Real Estate",
       icon: Building,
+    },
+    {
+      id: "devices" as const,
+      label: "Device Management",
+      icon: Smartphone,
     },
   ];
 

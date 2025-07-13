@@ -4,7 +4,9 @@ import { storage } from "./storage";
 import { 
   insertGeneralTransactionSchema,
   insertPropertySchema,
-  insertRealEstateTransactionSchema
+  insertRealEstateTransactionSchema,
+  insertDeviceSchema,
+  insertDeviceTransactionSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -206,6 +208,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const success = await storage.deleteRealEstateTransaction(id);
+      if (!success) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete transaction" });
+    }
+  });
+
+  // Device Routes
+  app.get("/api/devices", async (req, res) => {
+    try {
+      const devices = await storage.getDevices();
+      res.json(devices);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch devices" });
+    }
+  });
+
+  app.get("/api/devices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const device = await storage.getDevice(id);
+      if (!device) {
+        return res.status(404).json({ message: "Device not found" });
+      }
+      res.json(device);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch device" });
+    }
+  });
+
+  app.post("/api/devices", async (req, res) => {
+    try {
+      const validatedData = insertDeviceSchema.parse(req.body);
+      const device = await storage.createDevice(validatedData);
+      res.status(201).json(device);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create device" });
+    }
+  });
+
+  app.put("/api/devices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertDeviceSchema.partial().parse(req.body);
+      const device = await storage.updateDevice(id, validatedData);
+      if (!device) {
+        return res.status(404).json({ message: "Device not found" });
+      }
+      res.json(device);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update device" });
+    }
+  });
+
+  app.delete("/api/devices/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteDevice(id);
+      if (!success) {
+        return res.status(404).json({ message: "Device not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete device" });
+    }
+  });
+
+  // Device Transactions Routes
+  app.get("/api/device-transactions", async (req, res) => {
+    try {
+      const deviceId = req.query.deviceId ? parseInt(req.query.deviceId as string) : undefined;
+      let transactions;
+      
+      if (deviceId) {
+        transactions = await storage.getDeviceTransactionsByDevice(deviceId);
+      } else {
+        transactions = await storage.getDeviceTransactions();
+      }
+      
+      res.json(transactions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch device transactions" });
+    }
+  });
+
+  app.get("/api/device-transactions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const transaction = await storage.getDeviceTransaction(id);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      res.json(transaction);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch transaction" });
+    }
+  });
+
+  app.post("/api/device-transactions", async (req, res) => {
+    try {
+      const validatedData = insertDeviceTransactionSchema.parse(req.body);
+      const transaction = await storage.createDeviceTransaction(validatedData);
+      res.status(201).json(transaction);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create transaction" });
+    }
+  });
+
+  app.put("/api/device-transactions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertDeviceTransactionSchema.partial().parse(req.body);
+      const transaction = await storage.updateDeviceTransaction(id, validatedData);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      res.json(transaction);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update transaction" });
+    }
+  });
+
+  app.delete("/api/device-transactions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteDeviceTransaction(id);
       if (!success) {
         return res.status(404).json({ message: "Transaction not found" });
       }

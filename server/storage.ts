@@ -4,7 +4,11 @@ import {
   Property,
   InsertProperty,
   RealEstateTransaction,
-  InsertRealEstateTransaction
+  InsertRealEstateTransaction,
+  Device,
+  InsertDevice,
+  DeviceTransaction,
+  InsertDeviceTransaction
 } from "@shared/schema";
 
 export interface IStorage {
@@ -29,23 +33,46 @@ export interface IStorage {
   createRealEstateTransaction(transaction: InsertRealEstateTransaction): Promise<RealEstateTransaction>;
   updateRealEstateTransaction(id: number, transaction: Partial<InsertRealEstateTransaction>): Promise<RealEstateTransaction | undefined>;
   deleteRealEstateTransaction(id: number): Promise<boolean>;
+  
+  // Devices
+  getDevices(): Promise<Device[]>;
+  getDevice(id: number): Promise<Device | undefined>;
+  createDevice(device: InsertDevice): Promise<Device>;
+  updateDevice(id: number, device: Partial<InsertDevice>): Promise<Device | undefined>;
+  deleteDevice(id: number): Promise<boolean>;
+  
+  // Device Transactions
+  getDeviceTransactions(): Promise<DeviceTransaction[]>;
+  getDeviceTransactionsByDevice(deviceId: number): Promise<DeviceTransaction[]>;
+  getDeviceTransaction(id: number): Promise<DeviceTransaction | undefined>;
+  createDeviceTransaction(transaction: InsertDeviceTransaction): Promise<DeviceTransaction>;
+  updateDeviceTransaction(id: number, transaction: Partial<InsertDeviceTransaction>): Promise<DeviceTransaction | undefined>;
+  deleteDeviceTransaction(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
   private generalTransactions: Map<number, GeneralTransaction>;
   private properties: Map<number, Property>;
   private realEstateTransactions: Map<number, RealEstateTransaction>;
+  private devices: Map<number, Device>;
+  private deviceTransactions: Map<number, DeviceTransaction>;
   private currentGeneralTransactionId: number;
   private currentPropertyId: number;
   private currentRealEstateTransactionId: number;
+  private currentDeviceId: number;
+  private currentDeviceTransactionId: number;
 
   constructor() {
     this.generalTransactions = new Map();
     this.properties = new Map();
     this.realEstateTransactions = new Map();
+    this.devices = new Map();
+    this.deviceTransactions = new Map();
     this.currentGeneralTransactionId = 1;
     this.currentPropertyId = 1;
     this.currentRealEstateTransactionId = 1;
+    this.currentDeviceId = 1;
+    this.currentDeviceTransactionId = 1;
   }
 
   // General Transactions
@@ -161,6 +188,86 @@ export class MemStorage implements IStorage {
 
   async deleteRealEstateTransaction(id: number): Promise<boolean> {
     return this.realEstateTransactions.delete(id);
+  }
+
+  // Devices
+  async getDevices(): Promise<Device[]> {
+    return Array.from(this.devices.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getDevice(id: number): Promise<Device | undefined> {
+    return this.devices.get(id);
+  }
+
+  async createDevice(insertDevice: InsertDevice): Promise<Device> {
+    const id = this.currentDeviceId++;
+    const device: Device = {
+      ...insertDevice,
+      id,
+      createdAt: new Date(),
+    };
+    this.devices.set(id, device);
+    return device;
+  }
+
+  async updateDevice(id: number, updates: Partial<InsertDevice>): Promise<Device | undefined> {
+    const existing = this.devices.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.devices.set(id, updated);
+    return updated;
+  }
+
+  async deleteDevice(id: number): Promise<boolean> {
+    // Also delete associated device transactions
+    const transactions = Array.from(this.deviceTransactions.values())
+      .filter(t => t.deviceId === id);
+    
+    transactions.forEach(t => this.deviceTransactions.delete(t.id));
+    
+    return this.devices.delete(id);
+  }
+
+  // Device Transactions
+  async getDeviceTransactions(): Promise<DeviceTransaction[]> {
+    return Array.from(this.deviceTransactions.values()).sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }
+
+  async getDeviceTransactionsByDevice(deviceId: number): Promise<DeviceTransaction[]> {
+    return Array.from(this.deviceTransactions.values())
+      .filter(t => t.deviceId === deviceId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  async getDeviceTransaction(id: number): Promise<DeviceTransaction | undefined> {
+    return this.deviceTransactions.get(id);
+  }
+
+  async createDeviceTransaction(insertTransaction: InsertDeviceTransaction): Promise<DeviceTransaction> {
+    const id = this.currentDeviceTransactionId++;
+    const transaction: DeviceTransaction = {
+      ...insertTransaction,
+      id,
+      createdAt: new Date(),
+    };
+    this.deviceTransactions.set(id, transaction);
+    return transaction;
+  }
+
+  async updateDeviceTransaction(id: number, updates: Partial<InsertDeviceTransaction>): Promise<DeviceTransaction | undefined> {
+    const existing = this.deviceTransactions.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.deviceTransactions.set(id, updated);
+    return updated;
+  }
+
+  async deleteDeviceTransaction(id: number): Promise<boolean> {
+    return this.deviceTransactions.delete(id);
   }
 }
 

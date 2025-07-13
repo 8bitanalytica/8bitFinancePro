@@ -35,6 +35,36 @@ export const realEstateTransactions = pgTable("real_estate_transactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Devices Table
+export const devices = pgTable("devices", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // "laptop", "phone", "tablet", "desktop", "server", "other"
+  brand: text("brand").notNull(),
+  model: text("model").notNull(),
+  serialNumber: text("serial_number"),
+  purchaseDate: timestamp("purchase_date"),
+  purchasePrice: decimal("purchase_price", { precision: 10, scale: 2 }),
+  warrantyExpiry: timestamp("warranty_expiry"),
+  status: text("status").notNull(), // "active", "maintenance", "retired", "lost", "broken"
+  location: text("location"), // where the device is located
+  assignedTo: text("assigned_to"), // who is using the device
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Device Transactions Table (for tracking device-related expenses)
+export const deviceTransactions = pgTable("device_transactions", {
+  id: serial("id").primaryKey(),
+  deviceId: integer("device_id").notNull(),
+  type: text("type").notNull(), // "expense" (repairs, upgrades, accessories)
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // "repair", "upgrade", "accessory", "maintenance", "insurance"
+  date: timestamp("date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertGeneralTransactionSchema = createInsertSchema(generalTransactions).omit({
   id: true,
@@ -51,6 +81,16 @@ export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTr
   createdAt: true,
 });
 
+export const insertDeviceSchema = createInsertSchema(devices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDeviceTransactionSchema = createInsertSchema(deviceTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type GeneralTransaction = typeof generalTransactions.$inferSelect;
 export type InsertGeneralTransaction = z.infer<typeof insertGeneralTransactionSchema>;
@@ -60,3 +100,9 @@ export type InsertProperty = z.infer<typeof insertPropertySchema>;
 
 export type RealEstateTransaction = typeof realEstateTransactions.$inferSelect;
 export type InsertRealEstateTransaction = z.infer<typeof insertRealEstateTransactionSchema>;
+
+export type Device = typeof devices.$inferSelect;
+export type InsertDevice = z.infer<typeof insertDeviceSchema>;
+
+export type DeviceTransaction = typeof deviceTransactions.$inferSelect;
+export type InsertDeviceTransaction = z.infer<typeof insertDeviceTransactionSchema>;

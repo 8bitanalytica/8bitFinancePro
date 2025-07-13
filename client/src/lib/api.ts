@@ -5,7 +5,11 @@ import type {
   Property,
   InsertProperty,
   RealEstateTransaction,
-  InsertRealEstateTransaction
+  InsertRealEstateTransaction,
+  Device,
+  InsertDevice,
+  DeviceTransaction,
+  InsertDeviceTransaction
 } from "@shared/schema";
 
 // General Transactions API
@@ -89,5 +93,62 @@ export const realEstateTransactionsApi = {
 
   delete: async (id: number): Promise<void> => {
     await apiRequest("DELETE", `/api/real-estate-transactions/${id}`);
+  },
+};
+
+// Devices API
+export const devicesApi = {
+  getAll: async (): Promise<Device[]> => {
+    const response = await apiRequest("GET", "/api/devices");
+    return response.json();
+  },
+
+  get: async (id: number): Promise<Device> => {
+    const response = await apiRequest("GET", `/api/devices/${id}`);
+    return response.json();
+  },
+
+  create: async (data: InsertDevice): Promise<Device> => {
+    const response = await apiRequest("POST", "/api/devices", data);
+    return response.json();
+  },
+
+  update: async (id: number, data: Partial<InsertDevice>): Promise<Device> => {
+    const response = await apiRequest("PUT", `/api/devices/${id}`, data);
+    return response.json();
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiRequest("DELETE", `/api/devices/${id}`);
+  },
+};
+
+// Device Transactions API
+export const deviceTransactionsApi = {
+  getAll: async (deviceId?: number): Promise<DeviceTransaction[]> => {
+    const url = deviceId 
+      ? `/api/device-transactions?deviceId=${deviceId}`
+      : "/api/device-transactions";
+    const response = await apiRequest("GET", url);
+    return response.json();
+  },
+
+  get: async (id: number): Promise<DeviceTransaction> => {
+    const response = await apiRequest("GET", `/api/device-transactions/${id}`);
+    return response.json();
+  },
+
+  create: async (data: InsertDeviceTransaction): Promise<DeviceTransaction> => {
+    const response = await apiRequest("POST", "/api/device-transactions", data);
+    return response.json();
+  },
+
+  update: async (id: number, data: Partial<InsertDeviceTransaction>): Promise<DeviceTransaction> => {
+    const response = await apiRequest("PUT", `/api/device-transactions/${id}`, data);
+    return response.json();
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiRequest("DELETE", `/api/device-transactions/${id}`);
   },
 };
