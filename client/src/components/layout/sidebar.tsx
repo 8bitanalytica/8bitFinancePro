@@ -28,11 +28,6 @@ export default function Sidebar({ activeModule, onModuleChange, isOpen, onToggle
       label: "Device Management",
       icon: Smartphone,
     },
-    {
-      id: "settings" as const,
-      label: "Settings",
-      icon: Settings,
-    },
   ];
 
   const tools = [
@@ -99,10 +94,19 @@ export default function Sidebar({ activeModule, onModuleChange, isOpen, onToggle
             <li key={tool.id}>
               <Button
                 variant="ghost"
-                className="w-full justify-start text-sm font-medium text-gray-600 hover:bg-gray-50"
+                className={cn(
+                  "w-full justify-start text-sm font-medium transition-colors",
+                  activeModule === tool.id
+                    ? "text-primary bg-blue-50 hover:bg-blue-100"
+                    : "text-gray-600 hover:bg-gray-50"
+                )}
                 onClick={() => {
-                  // Handle tool actions
-                  console.log(`${tool.id} clicked`);
+                  if (tool.id === "settings") {
+                    onModuleChange("settings");
+                  } else {
+                    // Handle other tool actions
+                    console.log(`${tool.id} clicked`);
+                  }
                 }}
               >
                 <tool.icon className="mr-3 h-4 w-4" />

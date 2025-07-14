@@ -35,10 +35,20 @@ The application now uses PostgreSQL with five main tables:
 - `devices`: For managing technology devices and equipment
 - `device_transactions`: For tracking device-related expenses and maintenance
 
+### Settings System
+The application includes a comprehensive settings system with:
+- **Currency Selection**: Support for 10 major currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BRL)
+- **Expense Categories**: Customizable categories for each module (general, real estate, devices)
+- **Bank Account Management**: Multiple bank accounts with visual tracking, types, balances, and color coding
+- **Settings Persistence**: All settings stored in localStorage for session persistence
+- **Import/Export**: Settings backup and restore functionality
+
 ### Frontend Components
 - **Dashboard**: Main application interface with module switching
-- **Sidebar**: Navigation between general finances and real estate modules
-- **Modal System**: Reusable modals for adding/editing transactions and properties
+- **Sidebar**: Navigation between three modules (general, real estate, devices) with settings moved to tools section
+- **Modal System**: Reusable modals for adding/editing transactions, properties, and devices
+- **Settings Module**: Comprehensive settings management with currency, categories, and bank accounts
+- **Bank Account Display**: Visual bank account cards in general finances with color coding and balance tracking
 - **UI Components**: Comprehensive set of accessible components from shadcn/ui
 
 ### Backend Services

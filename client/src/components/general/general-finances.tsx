@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search } from "lucide-react";
 import { format } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
+import { useAppSettings } from "@/components/settings/settings";
+import { formatCurrency } from "@/lib/currency";
 import type { GeneralTransaction } from "@shared/schema";
 
 export default function GeneralFinances() {
@@ -17,6 +19,7 @@ export default function GeneralFinances() {
   const [editingTransaction, setEditingTransaction] = useState<GeneralTransaction | undefined>();
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const settings = useAppSettings();
 
   const { data: transactions = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/general-transactions"],
@@ -144,6 +147,32 @@ export default function GeneralFinances() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Bank Accounts */}
+        {settings.bankAccounts && settings.bankAccounts.length > 0 && (
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bank Accounts</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {settings.bankAccounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="border rounded-lg p-4 space-y-2 bg-gray-50"
+                    style={{ borderLeft: `4px solid ${account.color}` }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-gray-900">{account.name}</h4>
+                      <span className="text-xs text-gray-500 capitalize">{account.type}</span>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(account.balance, settings.currency)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card className="mb-6">
