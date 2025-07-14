@@ -8,8 +8,15 @@ import {
   Device,
   InsertDevice,
   DeviceTransaction,
-  InsertDeviceTransaction
+  InsertDeviceTransaction,
+  generalTransactions,
+  properties,
+  realEstateTransactions,
+  devices,
+  deviceTransactions
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // General Transactions
@@ -271,4 +278,139 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  // General Transactions
+  async getGeneralTransactions(): Promise<GeneralTransaction[]> {
+    return await db.select().from(generalTransactions).orderBy(generalTransactions.date);
+  }
+
+  async getGeneralTransaction(id: number): Promise<GeneralTransaction | undefined> {
+    const [result] = await db.select().from(generalTransactions).where(eq(generalTransactions.id, id));
+    return result;
+  }
+
+  async createGeneralTransaction(transaction: InsertGeneralTransaction): Promise<GeneralTransaction> {
+    const [result] = await db.insert(generalTransactions).values(transaction).returning();
+    return result;
+  }
+
+  async updateGeneralTransaction(id: number, transaction: Partial<InsertGeneralTransaction>): Promise<GeneralTransaction | undefined> {
+    const [result] = await db.update(generalTransactions).set(transaction).where(eq(generalTransactions.id, id)).returning();
+    return result;
+  }
+
+  async deleteGeneralTransaction(id: number): Promise<boolean> {
+    const result = await db.delete(generalTransactions).where(eq(generalTransactions.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Properties
+  async getProperties(): Promise<Property[]> {
+    return await db.select().from(properties).orderBy(properties.name);
+  }
+
+  async getProperty(id: number): Promise<Property | undefined> {
+    const [result] = await db.select().from(properties).where(eq(properties.id, id));
+    return result;
+  }
+
+  async createProperty(property: InsertProperty): Promise<Property> {
+    const [result] = await db.insert(properties).values(property).returning();
+    return result;
+  }
+
+  async updateProperty(id: number, property: Partial<InsertProperty>): Promise<Property | undefined> {
+    const [result] = await db.update(properties).set(property).where(eq(properties.id, id)).returning();
+    return result;
+  }
+
+  async deleteProperty(id: number): Promise<boolean> {
+    const result = await db.delete(properties).where(eq(properties.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Real Estate Transactions
+  async getRealEstateTransactions(): Promise<RealEstateTransaction[]> {
+    return await db.select().from(realEstateTransactions).orderBy(realEstateTransactions.date);
+  }
+
+  async getRealEstateTransactionsByProperty(propertyId: number): Promise<RealEstateTransaction[]> {
+    return await db.select().from(realEstateTransactions).where(eq(realEstateTransactions.propertyId, propertyId)).orderBy(realEstateTransactions.date);
+  }
+
+  async getRealEstateTransaction(id: number): Promise<RealEstateTransaction | undefined> {
+    const [result] = await db.select().from(realEstateTransactions).where(eq(realEstateTransactions.id, id));
+    return result;
+  }
+
+  async createRealEstateTransaction(transaction: InsertRealEstateTransaction): Promise<RealEstateTransaction> {
+    const [result] = await db.insert(realEstateTransactions).values(transaction).returning();
+    return result;
+  }
+
+  async updateRealEstateTransaction(id: number, transaction: Partial<InsertRealEstateTransaction>): Promise<RealEstateTransaction | undefined> {
+    const [result] = await db.update(realEstateTransactions).set(transaction).where(eq(realEstateTransactions.id, id)).returning();
+    return result;
+  }
+
+  async deleteRealEstateTransaction(id: number): Promise<boolean> {
+    const result = await db.delete(realEstateTransactions).where(eq(realEstateTransactions.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Devices
+  async getDevices(): Promise<Device[]> {
+    return await db.select().from(devices).orderBy(devices.name);
+  }
+
+  async getDevice(id: number): Promise<Device | undefined> {
+    const [result] = await db.select().from(devices).where(eq(devices.id, id));
+    return result;
+  }
+
+  async createDevice(device: InsertDevice): Promise<Device> {
+    const [result] = await db.insert(devices).values(device).returning();
+    return result;
+  }
+
+  async updateDevice(id: number, device: Partial<InsertDevice>): Promise<Device | undefined> {
+    const [result] = await db.update(devices).set(device).where(eq(devices.id, id)).returning();
+    return result;
+  }
+
+  async deleteDevice(id: number): Promise<boolean> {
+    const result = await db.delete(devices).where(eq(devices.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Device Transactions
+  async getDeviceTransactions(): Promise<DeviceTransaction[]> {
+    return await db.select().from(deviceTransactions).orderBy(deviceTransactions.date);
+  }
+
+  async getDeviceTransactionsByDevice(deviceId: number): Promise<DeviceTransaction[]> {
+    return await db.select().from(deviceTransactions).where(eq(deviceTransactions.deviceId, deviceId)).orderBy(deviceTransactions.date);
+  }
+
+  async getDeviceTransaction(id: number): Promise<DeviceTransaction | undefined> {
+    const [result] = await db.select().from(deviceTransactions).where(eq(deviceTransactions.id, id));
+    return result;
+  }
+
+  async createDeviceTransaction(transaction: InsertDeviceTransaction): Promise<DeviceTransaction> {
+    const [result] = await db.insert(deviceTransactions).values(transaction).returning();
+    return result;
+  }
+
+  async updateDeviceTransaction(id: number, transaction: Partial<InsertDeviceTransaction>): Promise<DeviceTransaction | undefined> {
+    const [result] = await db.update(deviceTransactions).set(transaction).where(eq(deviceTransactions.id, id)).returning();
+    return result;
+  }
+
+  async deleteDeviceTransaction(id: number): Promise<boolean> {
+    const result = await db.delete(deviceTransactions).where(eq(deviceTransactions.id, id));
+    return result.rowCount > 0;
+  }
+}
+
+export const storage = new DatabaseStorage();

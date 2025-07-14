@@ -28,10 +28,12 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### Database Schema
-The application uses three main tables:
+The application now uses PostgreSQL with five main tables:
 - `general_transactions`: For tracking personal income/expenses
 - `properties`: For managing real estate properties
 - `real_estate_transactions`: For tracking property-related transactions
+- `devices`: For managing technology devices and equipment
+- `device_transactions`: For tracking device-related expenses and maintenance
 
 ### Frontend Components
 - **Dashboard**: Main application interface with module switching
@@ -40,9 +42,10 @@ The application uses three main tables:
 - **UI Components**: Comprehensive set of accessible components from shadcn/ui
 
 ### Backend Services
-- **Storage Layer**: Abstracted storage interface with in-memory implementation
+- **Storage Layer**: Abstracted storage interface with PostgreSQL database implementation
 - **Route Handlers**: RESTful endpoints for all CRUD operations
 - **Validation**: Zod schema validation for all API inputs
+- **Database Connection**: Neon PostgreSQL with Drizzle ORM
 
 ## Data Flow
 
