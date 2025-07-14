@@ -31,6 +31,7 @@ const deviceTypes = [
   { value: "mouse", label: "Mouse" },
   { value: "headphones", label: "Headphones" },
   { value: "camera", label: "Camera" },
+  { value: "appliance", label: "Household Appliance" },
   { value: "other", label: "Other" },
 ];
 
@@ -51,6 +52,10 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
     purchaseDate: z.string().optional(),
     warrantyExpiry: z.string().optional(),
     purchasePrice: z.string().optional(),
+    receiptImage: z.string().optional(),
+    deviceImage: z.string().optional(),
+    alertDays: z.string().optional(),
+    isActive: z.boolean().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -68,6 +73,10 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
       location: device.location || "",
       assignedTo: device.assignedTo || "",
       notes: device.notes || "",
+      receiptImage: device.receiptImage || "",
+      deviceImage: device.deviceImage || "",
+      alertDays: device.alertDays?.toString() || "30",
+      isActive: device.isActive ?? true,
     } : {
       name: "",
       type: "",
@@ -81,8 +90,21 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
       location: "",
       assignedTo: "",
       notes: "",
+      receiptImage: "",
+      deviceImage: "",
+      alertDays: "30",
+      isActive: true,
     },
   });
+
+  // Utility function to handle image file upload and convert to base64
+  const handleImageUpload = (file: File, callback: (base64: string) => void) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      callback(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -95,6 +117,10 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
         location: values.location || null,
         assignedTo: values.assignedTo || null,
         notes: values.notes || null,
+        receiptImage: values.receiptImage || null,
+        deviceImage: values.deviceImage || null,
+        alertDays: values.alertDays ? parseInt(values.alertDays) : 30,
+        isActive: values.isActive ?? true,
       };
 
       if (isEditing) {
@@ -326,6 +352,140 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
                 )}
               />
             </div>
+
+            {/* Warranty Alert Settings */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="alertDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Warranty Alert (Days Before Expiry)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="365"
+                        placeholder="30"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center space-x-2 pt-6">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-medium">Device is active</FormLabel>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Receipt Image Upload */}
+            <FormField
+              control={form.control}
+              name="receiptImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Receipt Image</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(file, (base64) => {
+                              field.onChange(base64);
+                            });
+                          }
+                        }}
+                      />
+                      {field.value && (
+                        <div className="mt-2">
+                          <img 
+                            src={field.value} 
+                            alt="Receipt" 
+                            className="max-w-full h-32 object-contain border rounded"
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => field.onChange("")}
+                            className="mt-2"
+                          >
+                            Remove Receipt
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Device Image Upload */}
+            <FormField
+              control={form.control}
+              name="deviceImage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Device Image</FormLabel>
+                  <FormControl>
+                    <div className="space-y-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleImageUpload(file, (base64) => {
+                              field.onChange(base64);
+                            });
+                          }
+                        }}
+                      />
+                      {field.value && (
+                        <div className="mt-2">
+                          <img 
+                            src={field.value} 
+                            alt="Device" 
+                            className="max-w-full h-32 object-contain border rounded"
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => field.onChange("")}
+                            className="mt-2"
+                          >
+                            Remove Image
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

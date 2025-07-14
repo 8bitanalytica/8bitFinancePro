@@ -39,7 +39,7 @@ export const realEstateTransactions = pgTable("real_estate_transactions", {
 export const devices = pgTable("devices", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(), // "laptop", "phone", "tablet", "desktop", "server", "other"
+  type: text("type").notNull(), // "laptop", "phone", "tablet", "desktop", "server", "appliance", "other"
   brand: text("brand").notNull(),
   model: text("model").notNull(),
   serialNumber: text("serial_number"),
@@ -50,6 +50,10 @@ export const devices = pgTable("devices", {
   location: text("location"), // where the device is located
   assignedTo: text("assigned_to"), // who is using the device
   notes: text("notes"),
+  receiptImage: text("receipt_image"), // Base64 encoded image or URL
+  deviceImage: text("device_image"), // Base64 encoded image or URL
+  alertDays: integer("alert_days").default(30), // Days before warranty expiry to alert
+  isActive: boolean("is_active").default(true), // Track if device is still owned/active
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

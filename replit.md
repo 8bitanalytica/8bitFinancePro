@@ -32,7 +32,7 @@ The application now uses PostgreSQL with five main tables:
 - `general_transactions`: For tracking personal income/expenses
 - `properties`: For managing real estate properties
 - `real_estate_transactions`: For tracking property-related transactions
-- `devices`: For managing technology devices and equipment
+- `devices`: For managing technology devices and equipment with receipt/device images, warranty tracking, and expiration alerts
 - `device_transactions`: For tracking device-related expenses and maintenance
 
 ### Settings System
@@ -42,6 +42,15 @@ The application includes a comprehensive settings system with:
 - **Bank Account Management**: Multiple bank accounts with visual tracking, types, balances, and color coding
 - **Settings Persistence**: All settings stored in localStorage for session persistence
 - **Import/Export**: Settings backup and restore functionality
+
+### Enhanced Device Management
+The device management system now includes:
+- **Comprehensive Device Tracking**: Support for household appliances and all device types
+- **Receipt Management**: Upload and store receipt images with device records
+- **Device Images**: Upload and display device photos for easy identification
+- **Warranty Expiration Alerts**: Configurable alerts for devices approaching warranty expiration
+- **Visual Device Cards**: Enhanced display with device images and warranty status
+- **Device Status Tracking**: Active/inactive status tracking for comprehensive device lifecycle management
 
 ### Frontend Components
 - **Dashboard**: Main application interface with module switching

@@ -47,6 +47,25 @@ export default function DeviceManagement() {
   const devicesNeedingAttention = devices.filter(d => d.status === "maintenance" || d.status === "broken").length;
   const totalDeviceValue = devices.reduce((sum, d) => sum + (parseFloat(d.purchasePrice || "0")), 0);
 
+  // Calculate warranty expiration alerts
+  const getWarrantyExpirationAlerts = () => {
+    const now = new Date();
+    return devices.filter(device => {
+      if (!device.warrantyExpiry || device.status !== "active") return false;
+      const warrantyExpiry = new Date(device.warrantyExpiry);
+      const alertDays = device.alertDays || 30;
+      const alertDate = new Date(warrantyExpiry);
+      alertDate.setDate(alertDate.getDate() - alertDays);
+      return now >= alertDate && now <= warrantyExpiry;
+    });
+  };
+
+  const warrantyAlerts = getWarrantyExpirationAlerts();
+  const expiredWarranties = devices.filter(device => {
+    if (!device.warrantyExpiry || device.status !== "active") return false;
+    return new Date(device.warrantyExpiry) < new Date();
+  });
+
   const handleAddDevice = () => {
     setEditingDevice(undefined);
     setShowDeviceModal(true);
@@ -137,6 +156,71 @@ export default function DeviceManagement() {
       </div>
 
       <div className="p-6">
+        {/* Warranty Expiration Alerts */}
+        {(warrantyAlerts.length > 0 || expiredWarranties.length > 0) && (
+          <div className="mb-6 space-y-4">
+            {warrantyAlerts.length > 0 && (
+              <Card className="border-yellow-200 bg-yellow-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                    <h3 className="font-semibold text-yellow-800">Warranty Expiration Alerts</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {warrantyAlerts.map((device) => (
+                      <div key={device.id} className="flex items-center justify-between bg-white p-3 rounded border">
+                        <div>
+                          <p className="font-medium text-gray-900">{device.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {device.brand} {device.model} - Warranty expires {format(new Date(device.warrantyExpiry!), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditDevice(device)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {expiredWarranties.length > 0 && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <h3 className="font-semibold text-red-800">Expired Warranties</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {expiredWarranties.map((device) => (
+                      <div key={device.id} className="flex items-center justify-between bg-white p-3 rounded border">
+                        <div>
+                          <p className="font-medium text-gray-900">{device.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {device.brand} {device.model} - Warranty expired {format(new Date(device.warrantyExpiry!), 'MMM dd, yyyy')}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditDevice(device)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+        
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -245,51 +329,82 @@ export default function DeviceManagement() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {filteredDevices.map((device) => (
               <Card key={device.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(device.status)}
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{device.name}</h3>
-                        <p className="text-sm text-gray-600">{device.brand} {device.model}</p>
-                      </div>
+                <CardContent className="p-0">
+                  {/* Device Image */}
+                  {device.deviceImage && (
+                    <div className="h-48 bg-gray-100 overflow-hidden">
+                      <img 
+                        src={device.deviceImage} 
+                        alt={device.name} 
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <Badge className={`${getStatusBadgeColor(device.status)} border-0`}>
-                      {device.status}
-                    </Badge>
-                  </div>
+                  )}
                   
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Type:</span>
-                      <span className="text-sm font-medium">{device.type}</span>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        {getStatusIcon(device.status)}
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">{device.name}</h3>
+                          <p className="text-sm text-gray-600">{device.brand} {device.model}</p>
+                        </div>
+                      </div>
+                      <Badge className={`${getStatusBadgeColor(device.status)} border-0`}>
+                        {device.status}
+                      </Badge>
                     </div>
-                    {device.purchasePrice && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Purchase Price:</span>
-                        <span className="text-sm font-medium">${device.purchasePrice}</span>
+                    
+                    {/* Warranty Status */}
+                    {device.warrantyExpiry && (
+                      <div className="mb-4 p-3 rounded-lg bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">Warranty Status:</span>
+                          {new Date(device.warrantyExpiry) > new Date() ? (
+                            <Badge className="bg-green-100 text-green-800 border-0">
+                              Valid until {format(new Date(device.warrantyExpiry), 'MMM dd, yyyy')}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-100 text-red-800 border-0">
+                              Expired
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     )}
-                    {device.assignedTo && (
+                    
+                    <div className="space-y-2 mb-4">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Assigned To:</span>
-                        <span className="text-sm font-medium">{device.assignedTo}</span>
+                        <span className="text-sm text-gray-600">Type:</span>
+                        <span className="text-sm font-medium capitalize">{device.type}</span>
                       </div>
-                    )}
-                    {device.location && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Location:</span>
-                        <span className="text-sm font-medium">{device.location}</span>
-                      </div>
-                    )}
+                      {device.purchasePrice && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Purchase Price:</span>
+                          <span className="text-sm font-medium">${device.purchasePrice}</span>
+                        </div>
+                      )}
+                      {device.assignedTo && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Assigned To:</span>
+                          <span className="text-sm font-medium">{device.assignedTo}</span>
+                        </div>
+                      )}
+                      {device.location && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Location:</span>
+                          <span className="text-sm font-medium">{device.location}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <Button
+                      className="w-full bg-primary hover:bg-blue-700"
+                      onClick={() => handleEditDevice(device)}
+                    >
+                      View Details
+                    </Button>
                   </div>
-                  
-                  <Button
-                    className="w-full bg-primary hover:bg-blue-700"
-                    onClick={() => handleEditDevice(device)}
-                  >
-                    View Details
-                  </Button>
                 </CardContent>
               </Card>
             ))}
