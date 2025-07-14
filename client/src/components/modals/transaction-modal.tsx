@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { generalTransactionsApi, realEstateTransactionsApi } from "@/lib/api";
 import { insertGeneralTransactionSchema, insertRealEstateTransactionSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useAppSettings } from "@/components/settings/settings";
+import { useCurrency } from "@/lib/currency";
 import type { GeneralTransaction, RealEstateTransaction, Property } from "@shared/schema";
 
 interface TransactionModalProps {
@@ -19,30 +21,14 @@ interface TransactionModalProps {
   properties?: Property[];
 }
 
-const generalCategories = [
-  { value: "utilities", label: "Utilities" },
-  { value: "food", label: "Food & Dining" },
-  { value: "entertainment", label: "Entertainment" },
-  { value: "transportation", label: "Transportation" },
-  { value: "healthcare", label: "Healthcare" },
-  { value: "salary", label: "Salary" },
-  { value: "freelance", label: "Freelance" },
-  { value: "other", label: "Other" },
-];
-
-const realEstateCategories = [
-  { value: "rent", label: "Rent Income" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "repairs", label: "Repairs" },
-  { value: "taxes", label: "Taxes" },
-  { value: "insurance", label: "Insurance" },
-  { value: "other", label: "Other" },
-];
-
 export default function TransactionModal({ transaction, onClose, type, properties = [] }: TransactionModalProps) {
   const { toast } = useToast();
+  const settings = useAppSettings();
+  const currency = useCurrency();
   const isEditing = !!transaction;
   const isRealEstate = type === "real-estate";
+
+  const categories = isRealEstate ? settings.realEstateCategories : settings.generalCategories;
 
   const baseSchema = isRealEstate ? insertRealEstateTransactionSchema : insertGeneralTransactionSchema;
   const formSchema = baseSchema.extend({
@@ -141,7 +127,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>Amount ({currency.symbol})</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -185,9 +171,9 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {(isRealEstate ? realEstateCategories : generalCategories).map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
                         </SelectItem>
                       ))}
                     </SelectContent>

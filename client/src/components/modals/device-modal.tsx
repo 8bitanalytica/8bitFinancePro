@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { devicesApi } from "@/lib/api";
 import { insertDeviceSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/lib/currency";
 import type { Device } from "@shared/schema";
 
 interface DeviceModalProps {
@@ -43,6 +44,7 @@ const deviceStatuses = [
 
 export default function DeviceModal({ device, onClose }: DeviceModalProps) {
   const { toast } = useToast();
+  const currency = useCurrency();
   const isEditing = !!device;
 
   const formSchema = insertDeviceSchema.extend({
@@ -262,7 +264,7 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
                 name="purchasePrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Purchase Price</FormLabel>
+                    <FormLabel>Purchase Price ({currency.symbol})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"

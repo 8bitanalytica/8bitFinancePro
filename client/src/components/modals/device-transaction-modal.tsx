@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { deviceTransactionsApi } from "@/lib/api";
 import { insertDeviceTransactionSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { useAppSettings } from "@/components/settings/settings";
+import { useCurrency } from "@/lib/currency";
 import type { DeviceTransaction, Device } from "@shared/schema";
 
 interface DeviceTransactionModalProps {
@@ -18,18 +20,10 @@ interface DeviceTransactionModalProps {
   devices: Device[];
 }
 
-const deviceTransactionCategories = [
-  { value: "repair", label: "Repair" },
-  { value: "upgrade", label: "Upgrade" },
-  { value: "accessory", label: "Accessory" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "insurance", label: "Insurance" },
-  { value: "software", label: "Software" },
-  { value: "other", label: "Other" },
-];
-
 export default function DeviceTransactionModal({ transaction, onClose, devices }: DeviceTransactionModalProps) {
   const { toast } = useToast();
+  const settings = useAppSettings();
+  const currency = useCurrency();
   const isEditing = !!transaction;
 
   const formSchema = insertDeviceTransactionSchema.extend({
@@ -142,7 +136,7 @@ export default function DeviceTransactionModal({ transaction, onClose, devices }
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>Amount ({currency.symbol})</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -186,9 +180,9 @@ export default function DeviceTransactionModal({ transaction, onClose, devices }
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {deviceTransactionCategories.map((category) => (
-                        <SelectItem key={category.value} value={category.value}>
-                          {category.label}
+                      {settings.deviceCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
                         </SelectItem>
                       ))}
                     </SelectContent>

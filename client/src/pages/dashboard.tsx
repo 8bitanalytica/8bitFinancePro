@@ -3,11 +3,12 @@ import Sidebar from "@/components/layout/sidebar";
 import GeneralFinances from "@/components/general/general-finances";
 import RealEstateModule from "@/components/real-estate/real-estate-module";
 import DeviceManagement from "@/components/devices/device-management";
+import Settings from "@/components/settings/settings";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 
-type Module = "general" | "real-estate" | "devices";
+type Module = "general" | "real-estate" | "devices" | "settings";
 
 export default function Dashboard() {
   const [activeModule, setActiveModule] = useState<Module>("general");
@@ -46,6 +47,7 @@ export default function Dashboard() {
         {activeModule === "general" && <GeneralFinances />}
         {activeModule === "real-estate" && <RealEstateModule />}
         {activeModule === "devices" && <DeviceManagement />}
+        {activeModule === "settings" && <Settings />}
       </main>
 
       {isMobile && sidebarOpen && (
