@@ -48,6 +48,7 @@ const defaultSettings: AppSettings = {
     "Healthcare",
     "Education",
     "Travel",
+    "Device",
     "Income",
     "Investment",
   ],

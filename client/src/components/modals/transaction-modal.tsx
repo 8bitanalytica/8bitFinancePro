@@ -7,8 +7,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { generalTransactionsApi, realEstateTransactionsApi } from "@/lib/api";
-import { insertGeneralTransactionSchema, insertRealEstateTransactionSchema } from "@shared/schema";
+import { generalTransactionsApi, realEstateTransactionsApi, devicesApi } from "@/lib/api";
+import { insertGeneralTransactionSchema, insertRealEstateTransactionSchema, insertDeviceSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/components/settings/settings";
 import { useCurrency } from "@/lib/currency";
@@ -33,6 +33,28 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const baseSchema = isRealEstate ? insertRealEstateTransactionSchema : insertGeneralTransactionSchema;
   const formSchema = baseSchema.extend({
     date: z.string().min(1, "Date is required"),
+    // Device fields (only used when category is 'Device')
+    deviceName: z.string().optional(),
+    deviceBrand: z.string().optional(),
+    deviceModel: z.string().optional(),
+    deviceType: z.string().optional(),
+    deviceSerialNumber: z.string().optional(),
+    deviceWarrantyExpiry: z.string().optional(),
+    deviceAlertDaysBefore: z.number().optional(),
+    deviceLocation: z.string().optional(),
+    deviceAssignedTo: z.string().optional(),
+    deviceStatus: z.string().optional(),
+    deviceReceiptImage: z.string().optional(),
+    deviceImage: z.string().optional(),
+  }).superRefine((data, ctx) => {
+    // Validate device name is required when category is 'Device'
+    if (data.category === 'Device' && !data.deviceName?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Device name is required when category is 'Device'",
+        path: ['deviceName'],
+      });
+    }
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,6 +66,19 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       category: transaction.category,
       date: new Date(transaction.date).toISOString().split('T')[0],
       ...(isRealEstate && 'propertyId' in transaction && { propertyId: transaction.propertyId }),
+      // Device fields defaults
+      deviceName: "",
+      deviceBrand: "",
+      deviceModel: "",
+      deviceType: "electronics",
+      deviceSerialNumber: "",
+      deviceWarrantyExpiry: "",
+      deviceAlertDaysBefore: 30,
+      deviceLocation: "",
+      deviceAssignedTo: "",
+      deviceStatus: "active",
+      deviceReceiptImage: "",
+      deviceImage: "",
     } : {
       type: "expense",
       amount: "",
@@ -51,14 +86,34 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       category: "",
       date: new Date().toISOString().split('T')[0],
       ...(isRealEstate && { propertyId: 0 }),
+      // Device fields defaults
+      deviceName: "",
+      deviceBrand: "",
+      deviceModel: "",
+      deviceType: "electronics",
+      deviceSerialNumber: "",
+      deviceWarrantyExpiry: "",
+      deviceAlertDaysBefore: 30,
+      deviceLocation: "",
+      deviceAssignedTo: "",
+      deviceStatus: "active",
+      deviceReceiptImage: "",
+      deviceImage: "",
     },
   });
+
+  const watchedCategory = form.watch("category");
+  const isDeviceCategory = watchedCategory === "Device";
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       const transactionData = {
-        ...values,
+        type: values.type,
+        amount: values.amount,
+        description: values.description,
+        category: values.category,
         date: new Date(values.date),
+        ...(isRealEstate && { propertyId: values.propertyId }),
       };
 
       if (isRealEstate) {
@@ -75,7 +130,32 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           toast({ title: "Transaction updated successfully" });
         } else {
           await generalTransactionsApi.create(transactionData);
-          toast({ title: "Transaction created successfully" });
+          
+          // If category is 'Device', also create a device record
+          if (values.category === "Device" && values.deviceName) {
+            const deviceData = {
+              name: values.deviceName,
+              brand: values.deviceBrand || "",
+              model: values.deviceModel || "",
+              type: values.deviceType || "electronics",
+              serialNumber: values.deviceSerialNumber || "",
+              purchaseDate: new Date(values.date),
+              purchasePrice: parseFloat(values.amount),
+              warrantyExpiry: values.deviceWarrantyExpiry ? new Date(values.deviceWarrantyExpiry) : undefined,
+              alertDaysBefore: values.deviceAlertDaysBefore || 30,
+              location: values.deviceLocation || "",
+              assignedTo: values.deviceAssignedTo || "",
+              status: values.deviceStatus || "active",
+              receiptImage: values.deviceReceiptImage || "",
+              deviceImage: values.deviceImage || "",
+              notes: values.description || "",
+            };
+            
+            await devicesApi.create(deviceData);
+            toast({ title: "Transaction and device created successfully" });
+          } else {
+            toast({ title: "Transaction created successfully" });
+          }
         }
       }
 
@@ -91,7 +171,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className={`${isDeviceCategory ? 'sm:max-w-[700px]' : 'sm:max-w-[425px]'} max-h-[80vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Transaction" : "Add Transaction"}
@@ -182,6 +262,197 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                 </FormItem>
               )}
             />
+
+            {/* Device-specific fields when category is 'Device' */}
+            {isDeviceCategory && (
+              <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+                <h3 className="font-semibold text-blue-900">Device Information</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="deviceName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Device Name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., iPhone 15" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="deviceBrand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Brand</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Apple" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="deviceModel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Model</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Pro Max" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="deviceType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="electronics">Electronics</SelectItem>
+                            <SelectItem value="appliance">Appliance</SelectItem>
+                            <SelectItem value="computer">Computer</SelectItem>
+                            <SelectItem value="phone">Phone</SelectItem>
+                            <SelectItem value="tablet">Tablet</SelectItem>
+                            <SelectItem value="tv">TV</SelectItem>
+                            <SelectItem value="audio">Audio</SelectItem>
+                            <SelectItem value="gaming">Gaming</SelectItem>
+                            <SelectItem value="kitchen">Kitchen</SelectItem>
+                            <SelectItem value="cleaning">Cleaning</SelectItem>
+                            <SelectItem value="tools">Tools</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="deviceSerialNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Serial Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Device serial number" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="deviceStatus"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                            <SelectItem value="retired">Retired</SelectItem>
+                            <SelectItem value="broken">Broken</SelectItem>
+                            <SelectItem value="lost">Lost</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="deviceLocation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., Living Room" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="deviceAssignedTo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assigned To</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="deviceWarrantyExpiry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Warranty Expiry</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="deviceAlertDaysBefore"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Alert Days Before</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="30" 
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
 
             {isRealEstate && (
               <FormField
