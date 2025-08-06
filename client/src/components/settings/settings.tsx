@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Save, Settings as SettingsIcon } from "lucide-react";
+import { Plus, X, Save, Settings as SettingsIcon, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BankAccount {
@@ -111,6 +111,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<keyof Pick<AppSettings, 'generalCategories' | 'realEstateCategories' | 'deviceCategories'>>("generalCategories");
   const [showBankModal, setShowBankModal] = useState(false);
   const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
+  const [copiedCommands, setCopiedCommands] = useState(false);
   const [bankForm, setBankForm] = useState({
     name: "",
     type: "checking" as BankAccount["type"],
@@ -242,6 +243,41 @@ export default function Settings() {
 
   const getCurrencySymbol = (code: string) => {
     return currencies.find(c => c.code === code)?.symbol || code;
+  };
+
+  const copyInstallationCommands = async () => {
+    const commands = `# Installa Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Installa PostgreSQL
+sudo apt update && sudo apt install postgresql postgresql-contrib
+
+# Clone e setup progetto
+git clone [your-repo-url]
+cd financial-manager
+npm install
+
+# Configura database
+export DATABASE_URL="postgresql://user:pass@localhost:5432/dbname"
+npm run db:push
+
+# Avvia applicazione
+npm run dev # development
+npm run build && npm start # production`;
+
+    try {
+      await navigator.clipboard.writeText(commands);
+      setCopiedCommands(true);
+      toast({ title: "Comandi copiati negli appunti!" });
+      setTimeout(() => setCopiedCommands(false), 2000);
+    } catch (err) {
+      toast({ 
+        title: "Errore nella copia", 
+        description: "Non è stato possibile copiare i comandi negli appunti",
+        variant: "destructive" 
+      });
+    }
   };
 
   return (
@@ -487,6 +523,197 @@ export default function Settings() {
                 >
                   Import Settings
                 </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Technology Stack Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SettingsIcon className="h-5 w-5" />
+              Stack Tecnologico
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Architettura dell'Applicazione</h3>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 mb-4">
+                  Stack completo per configurare l'applicazione Financial Manager sulla tua VPS:
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Frontend */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Frontend</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div><strong>Framework:</strong> React 18 + TypeScript</div>
+                      <div><strong>Build Tool:</strong> Vite</div>
+                      <div><strong>UI Library:</strong> shadcn/ui + Radix UI</div>
+                      <div><strong>Styling:</strong> Tailwind CSS + PostCSS</div>
+                      <div><strong>State Management:</strong> TanStack Query (React Query)</div>
+                      <div><strong>Routing:</strong> Wouter</div>
+                      <div><strong>Forms:</strong> React Hook Form + Zod validation</div>
+                      <div><strong>Icons:</strong> Lucide React + React Icons</div>
+                    </div>
+                  </div>
+
+                  {/* Backend */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Backend</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div><strong>Runtime:</strong> Node.js 20</div>
+                      <div><strong>Framework:</strong> Express.js + TypeScript</div>
+                      <div><strong>Database:</strong> PostgreSQL</div>
+                      <div><strong>ORM:</strong> Drizzle ORM</div>
+                      <div><strong>Session Store:</strong> connect-pg-simple</div>
+                      <div><strong>Validation:</strong> Zod schemas</div>
+                      <div><strong>Development:</strong> tsx per TypeScript execution</div>
+                    </div>
+                  </div>
+
+                  {/* Database */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Database Schema</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div><strong>Tabelle principali:</strong></div>
+                      <div className="ml-4">
+                        • general_transactions (transazioni generali)<br />
+                        • properties (proprietà immobiliari)<br />
+                        • real_estate_transactions (transazioni immobiliari)<br />
+                        • devices (dispositivi e apparecchi)<br />
+                        • device_transactions (spese dispositivi)
+                      </div>
+                      <div><strong>Gestione Sessioni:</strong> Tabella session per autenticazione PostgreSQL</div>
+                    </div>
+                  </div>
+
+                  {/* Build & Deployment */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Build e Deploy</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div><strong>Frontend Build:</strong> Vite build → assets statici</div>
+                      <div><strong>Backend Build:</strong> ESBuild → bundle singolo</div>
+                      <div><strong>Database Migrations:</strong> Drizzle Kit push</div>
+                      <div><strong>Environment Variables:</strong> DATABASE_URL richiesta</div>
+                    </div>
+                  </div>
+
+                  {/* Dependencies */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Dipendenze Principali</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div><strong>Core:</strong> react, express, drizzle-orm, @neondatabase/serverless</div>
+                      <div><strong>UI:</strong> @radix-ui/*, tailwindcss, lucide-react</div>
+                      <div><strong>Utils:</strong> date-fns, zod, react-hook-form, @tanstack/react-query</div>
+                      <div><strong>Dev Tools:</strong> typescript, vite, drizzle-kit, tsx</div>
+                    </div>
+                  </div>
+
+                  {/* Server Requirements */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Requisiti VPS</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div><strong>Sistema Operativo:</strong> Linux (Ubuntu 20.04+ raccomandato)</div>
+                      <div><strong>Node.js:</strong> Versione 20 o superiore</div>
+                      <div><strong>PostgreSQL:</strong> Versione 14+ con estensioni standard</div>
+                      <div><strong>RAM:</strong> Minimo 2GB (4GB raccomandato)</div>
+                      <div><strong>Storage:</strong> Minimo 10GB SSD</div>
+                      <div><strong>Rete:</strong> Porta 5000 (configurabile)</div>
+                    </div>
+                  </div>
+
+                  {/* Installation Commands */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-gray-800">Comandi di Installazione</h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={copyInstallationCommands}
+                        className="flex items-center gap-2"
+                      >
+                        {copiedCommands ? (
+                          <>
+                            <Check className="h-4 w-4 text-green-600" />
+                            Copiato!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4" />
+                            Copia Comandi
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="bg-black text-green-400 p-3 rounded font-mono text-xs relative">
+                      <div># Installa Node.js 20</div>
+                      <div>curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -</div>
+                      <div>sudo apt-get install -y nodejs</div>
+                      <div></div>
+                      <div># Installa PostgreSQL</div>
+                      <div>sudo apt update && sudo apt install postgresql postgresql-contrib</div>
+                      <div></div>
+                      <div># Clone e setup progetto</div>
+                      <div>git clone [your-repo-url]</div>
+                      <div>cd financial-manager</div>
+                      <div>npm install</div>
+                      <div></div>
+                      <div># Configura database</div>
+                      <div>export DATABASE_URL="postgresql://user:pass@localhost:5432/dbname"</div>
+                      <div>npm run db:push</div>
+                      <div></div>
+                      <div># Avvia applicazione</div>
+                      <div>npm run dev # development</div>
+                      <div>npm run build && npm start # production</div>
+                    </div>
+                  </div>
+
+                  {/* Production Notes */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Note per Produzione</h4>
+                    <div className="text-sm text-gray-600 space-y-2">
+                      <div><strong>Proxy Inverso:</strong> Usa Nginx o Apache per servire l'applicazione</div>
+                      <div><strong>SSL/TLS:</strong> Configura HTTPS con Let's Encrypt</div>
+                      <div><strong>Process Manager:</strong> Usa PM2 per gestire il processo Node.js</div>
+                      <div><strong>Backup Database:</strong> Configura backup automatici PostgreSQL</div>
+                      <div><strong>Monitoraggio:</strong> Implementa logging e monitoring (Grafana, Prometheus)</div>
+                      <div><strong>Sicurezza:</strong> Configura firewall (ufw), aggiorna regolarmente il sistema</div>
+                    </div>
+                  </div>
+
+                  {/* Environment Variables */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Variabili d'Ambiente</h4>
+                    <div className="bg-gray-100 p-3 rounded font-mono text-xs">
+                      <div>DATABASE_URL=postgresql://user:password@localhost:5432/financial_db</div>
+                      <div>NODE_ENV=production</div>
+                      <div>PORT=5000</div>
+                      <div>SESSION_SECRET=your-secure-session-secret</div>
+                    </div>
+                  </div>
+
+                  {/* PM2 Configuration */}
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-2">Configurazione PM2 (ecosystem.config.js)</h4>
+                    <div className="bg-gray-100 p-3 rounded font-mono text-xs">
+                      <div>module.exports = &#123;</div>
+                      <div>&nbsp;&nbsp;apps: [&#123;</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;name: 'financial-manager',</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;script: './dist/server/index.js',</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;instances: 'max',</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;exec_mode: 'cluster',</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;env: &#123;</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;NODE_ENV: 'production',</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PORT: 5000</div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&#125;</div>
+                      <div>&nbsp;&nbsp;&#125;]</div>
+                      <div>&#125;;</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

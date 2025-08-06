@@ -42,6 +42,7 @@ The application includes a comprehensive settings system with:
 - **Bank Account Management**: Multiple bank accounts with visual tracking, types, balances, and color coding
 - **Settings Persistence**: All settings stored in localStorage for session persistence
 - **Import/Export**: Settings backup and restore functionality
+- **Technology Stack Documentation**: Complete VPS setup guide with installation commands, dependencies, and production configuration
 
 ### Enhanced Device Management
 The device management system now includes:
