@@ -108,8 +108,8 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       ...(isRealEstate && 'propertyId' in transaction && { propertyId: transaction.propertyId }),
       // Account fields (only for general finances)
       ...(!isRealEstate && {
-        fromAccountId: 'fromAccountId' in transaction ? transaction.fromAccountId || "" : "",
-        toAccountId: 'toAccountId' in transaction ? transaction.toAccountId || "" : "",
+        fromAccountId: ('fromAccountId' in transaction ? transaction.fromAccountId : "") || "",
+        toAccountId: ('toAccountId' in transaction ? transaction.toAccountId : "") || "",
       }),
       // Device fields defaults
       deviceName: "",

@@ -14,6 +14,7 @@ import AccountsSidebar from "@/components/general/accounts-sidebar";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import type { GeneralTransaction } from "@shared/schema";
 
 export default function GeneralFinances() {
@@ -24,6 +25,7 @@ export default function GeneralFinances() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [visibleTransactions, setVisibleTransactions] = useState(30);
   const settings = useAppSettings();
+  const { toast } = useToast();
 
   const { data: transactions = [], isLoading, refetch } = useQuery({
     queryKey: ["/api/general-transactions"],
@@ -91,6 +93,22 @@ export default function GeneralFinances() {
   const handleEditTransaction = (transaction: GeneralTransaction) => {
     setEditingTransaction(transaction);
     setShowModal(true);
+  };
+
+  const handleDeleteTransaction = async (transaction: GeneralTransaction) => {
+    if (confirm(`Are you sure you want to delete this transaction: "${transaction.description}"?`)) {
+      try {
+        await generalTransactionsApi.delete(transaction.id);
+        toast({ title: "Transaction deleted successfully" });
+        refetch();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete transaction. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleModalClose = () => {
@@ -355,6 +373,14 @@ export default function GeneralFinances() {
                                     onClick={() => handleEditTransaction(transaction)}
                                   >
                                     <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteTransaction(transaction)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
                                   </Button>
                                 </div>
                               </TableCell>
