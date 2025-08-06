@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { generalTransactionsApi } from "@/lib/api";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, CreditCard } from "lucide-react";
+import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
+import BankAccountView from "./bank-account-view";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import type { GeneralTransaction } from "@shared/schema";
@@ -19,6 +20,8 @@ export default function GeneralFinances() {
   const [editingTransaction, setEditingTransaction] = useState<GeneralTransaction | undefined>();
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<"overview" | "account">("overview");
   const settings = useAppSettings();
 
   const { data: transactions = [], isLoading, refetch } = useQuery({
@@ -26,7 +29,13 @@ export default function GeneralFinances() {
     queryFn: generalTransactionsApi.getAll,
   });
 
-  const filteredTransactions = transactions.filter(transaction => {
+  // Filter transactions for last month (overview)
+  const lastMonth = subDays(new Date(), 30);
+  const recentTransactions = transactions.filter(t => 
+    new Date(t.date) >= lastMonth
+  );
+
+  const filteredTransactions = recentTransactions.filter(transaction => {
     const matchesCategory = !categoryFilter || categoryFilter === "all" || transaction.category === categoryFilter;
     const matchesSearch = !searchQuery || 
       transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,6 +49,10 @@ export default function GeneralFinances() {
 
   const totalExpenses = transactions
     .filter(t => t.type === "expense")
+    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+  const totalTransfers = transactions
+    .filter(t => t.type === "transfer")
     .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
   const netBalance = totalIncome - totalExpenses;
@@ -58,6 +71,16 @@ export default function GeneralFinances() {
     setShowModal(false);
     setEditingTransaction(undefined);
     refetch();
+  };
+
+  const handleAccountClick = (accountId: string) => {
+    setSelectedAccountId(accountId);
+    setCurrentView("account");
+  };
+
+  const handleBackToOverview = () => {
+    setCurrentView("overview");
+    setSelectedAccountId(null);
   };
 
   const getCategoryBadgeColor = (category: string) => {
@@ -81,6 +104,16 @@ export default function GeneralFinances() {
     );
   }
 
+  // Show specific account view
+  if (currentView === "account" && selectedAccountId) {
+    return (
+      <BankAccountView 
+        accountId={selectedAccountId} 
+        onBack={handleBackToOverview} 
+      />
+    );
+  }
+
   return (
     <div>
       {/* Header */}
@@ -99,17 +132,17 @@ export default function GeneralFinances() {
 
       <div className="p-6">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Income</p>
-                  <p className="text-2xl font-bold text-secondary">${totalIncome.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500 mt-1">This month</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                  <p className="text-sm text-gray-500 mt-1">All time</p>
                 </div>
                 <div className="p-3 bg-green-50 rounded-full">
-                  <TrendingUp className="h-5 w-5 text-secondary" />
+                  <TrendingUp className="h-5 w-5 text-green-600" />
                 </div>
               </div>
             </CardContent>
@@ -120,11 +153,26 @@ export default function GeneralFinances() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-                  <p className="text-2xl font-bold text-destructive">${totalExpenses.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500 mt-1">This month</p>
+                  <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+                  <p className="text-sm text-gray-500 mt-1">All time</p>
                 </div>
                 <div className="p-3 bg-red-50 rounded-full">
-                  <TrendingDown className="h-5 w-5 text-destructive" />
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Transfers</p>
+                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalTransfers)}</p>
+                  <p className="text-sm text-gray-500 mt-1">All time</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-full">
+                  <ArrowUpDown className="h-5 w-5 text-blue-600" />
                 </div>
               </div>
             </CardContent>
@@ -135,40 +183,83 @@ export default function GeneralFinances() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Net Balance</p>
-                  <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-secondary' : 'text-destructive'}`}>
-                    ${netBalance.toFixed(2)}
+                  <p className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(netBalance)}
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">This month</p>
+                  <p className="text-sm text-gray-500 mt-1">All time</p>
                 </div>
                 <div className="p-3 bg-blue-50 rounded-full">
-                  <Wallet className="h-5 w-5 text-primary" />
+                  <Wallet className="h-5 w-5 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Bank Accounts */}
+        {/* Bank Accounts - Clickable */}
         {settings.bankAccounts && settings.bankAccounts.length > 0 && (
           <Card className="mb-6">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Bank Accounts</h3>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Bank Accounts
+              </CardTitle>
+              <p className="text-sm text-gray-600">Click on an account to view its transactions</p>
+            </CardHeader>
+            <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {settings.bankAccounts.map((account) => (
-                  <div
-                    key={account.id}
-                    className="border rounded-lg p-4 space-y-2 bg-gray-50"
-                    style={{ borderLeft: `4px solid ${account.color}` }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-gray-900">{account.name}</h4>
-                      <span className="text-xs text-gray-500 capitalize">{account.type}</span>
+                {settings.bankAccounts.map((account) => {
+                  // Calculate balance for each account based on transactions
+                  const accountTransactions = transactions.filter(transaction => {
+                    if (transaction.type === 'transfer') {
+                      return transaction.fromAccountId === account.id || transaction.toAccountId === account.id;
+                    }
+                    return transaction.toAccountId === account.id;
+                  });
+
+                  const calculatedBalance = accountTransactions.reduce((balance, transaction) => {
+                    if (transaction.type === 'transfer') {
+                      if (transaction.fromAccountId === account.id) {
+                        return balance - parseFloat(transaction.amount);
+                      } else if (transaction.toAccountId === account.id) {
+                        return balance + parseFloat(transaction.amount);
+                      }
+                    } else if (transaction.type === 'income') {
+                      return balance + parseFloat(transaction.amount);
+                    } else if (transaction.type === 'expense') {
+                      return balance - parseFloat(transaction.amount);
+                    }
+                    return balance;
+                  }, account.balance || 0);
+
+                  return (
+                    <div
+                      key={account.id}
+                      onClick={() => handleAccountClick(account.id)}
+                      className="border rounded-lg p-4 space-y-3 bg-white hover:bg-gray-50 cursor-pointer transition-colors shadow-sm hover:shadow-md"
+                      style={{ borderLeft: `4px solid ${account.color}` }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">{account.name}</h4>
+                        <span className="text-xs text-gray-500 capitalize bg-gray-100 px-2 py-1 rounded">
+                          {account.type}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold" style={{ color: account.color }}>
+                          {formatCurrency(calculatedBalance)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {accountTransactions.length} transaction{accountTransactions.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center text-xs text-gray-400">
+                        <span>Click to view details</span>
+                        <ArrowUpDown className="h-3 w-3 ml-1" />
+                      </div>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">
-                      {formatCurrency(account.balance, settings.currency)}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -213,7 +304,10 @@ export default function GeneralFinances() {
         <Card>
           <CardContent className="p-0">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Recent Transactions (Last 30 Days)</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Showing {filteredTransactions.length} transactions from all accounts
+              </p>
             </div>
             
             {filteredTransactions.length === 0 ? (

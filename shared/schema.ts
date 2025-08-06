@@ -5,11 +5,13 @@ import { z } from "zod";
 // General Transactions Table
 export const generalTransactions = pgTable("general_transactions", {
   id: serial("id").primaryKey(),
-  type: text("type").notNull(), // "income" or "expense"
+  type: text("type").notNull(), // "income", "expense", or "transfer"
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(),
   date: timestamp("date").notNull(),
+  fromAccountId: text("from_account_id"), // For transfers: source account
+  toAccountId: text("to_account_id"), // For transfers: destination account, or regular transaction account
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

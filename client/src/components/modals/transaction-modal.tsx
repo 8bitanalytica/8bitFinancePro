@@ -19,9 +19,10 @@ interface TransactionModalProps {
   onClose: () => void;
   type: "general" | "real-estate";
   properties?: Property[];
+  selectedAccountId?: string;
 }
 
-export default function TransactionModal({ transaction, onClose, type, properties = [] }: TransactionModalProps) {
+export default function TransactionModal({ transaction, onClose, type, properties = [], selectedAccountId }: TransactionModalProps) {
   const { toast } = useToast();
   const settings = useAppSettings();
   const currency = useCurrency();
@@ -33,6 +34,11 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const baseSchema = isRealEstate ? insertRealEstateTransactionSchema : insertGeneralTransactionSchema;
   const formSchema = baseSchema.extend({
     date: z.string().min(1, "Date is required"),
+    // Account fields for transfers and regular transactions (only for general finances)
+    ...(isRealEstate ? {} : {
+      fromAccountId: z.string().optional(),
+      toAccountId: z.string().optional(),
+    }),
     // Device fields (only used when category is 'Device')
     deviceName: z.string().optional(),
     deviceBrand: z.string().optional(),
@@ -55,6 +61,40 @@ export default function TransactionModal({ transaction, onClose, type, propertie
         path: ['deviceName'],
       });
     }
+    
+    // Validate transfer fields
+    if (data.type === 'transfer') {
+      if (!data.fromAccountId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "From account is required for transfers",
+          path: ['fromAccountId'],
+        });
+      }
+      if (!data.toAccountId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "To account is required for transfers",
+          path: ['toAccountId'],
+        });
+      }
+      if (data.fromAccountId === data.toAccountId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "From and to accounts must be different",
+          path: ['toAccountId'],
+        });
+      }
+    } else {
+      // For regular transactions, validate account selection
+      if (!isRealEstate && !data.toAccountId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Account selection is required",
+          path: ['toAccountId'],
+        });
+      }
+    }
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -66,6 +106,11 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       category: transaction.category,
       date: new Date(transaction.date).toISOString().split('T')[0],
       ...(isRealEstate && 'propertyId' in transaction && { propertyId: transaction.propertyId }),
+      // Account fields (only for general finances)
+      ...(!isRealEstate && {
+        fromAccountId: 'fromAccountId' in transaction ? transaction.fromAccountId || "" : "",
+        toAccountId: 'toAccountId' in transaction ? transaction.toAccountId || "" : "",
+      }),
       // Device fields defaults
       deviceName: "",
       deviceBrand: "",
@@ -86,6 +131,11 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       category: "",
       date: new Date().toISOString().split('T')[0],
       ...(isRealEstate && { propertyId: 0 }),
+      // Account fields (only for general finances)
+      ...(!isRealEstate && {
+        fromAccountId: "",
+        toAccountId: selectedAccountId || "",
+      }),
       // Device fields defaults
       deviceName: "",
       deviceBrand: "",
@@ -103,33 +153,45 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   });
 
   const watchedCategory = form.watch("category");
+  const watchedType = form.watch("type");
   const isDeviceCategory = watchedCategory === "Device";
+  const isTransfer = watchedType === "transfer";
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const transactionData = {
-        type: values.type,
-        amount: values.amount,
-        description: values.description,
-        category: values.category,
-        date: new Date(values.date),
-        ...(isRealEstate && { propertyId: values.propertyId }),
-      };
-
       if (isRealEstate) {
+        const realEstateData = {
+          type: values.type,
+          amount: values.amount,
+          description: values.description,
+          category: values.category,
+          date: new Date(values.date),
+          propertyId: (values as any).propertyId || 0,
+        };
+
         if (isEditing && 'propertyId' in transaction) {
-          await realEstateTransactionsApi.update(transaction.id, transactionData);
+          await realEstateTransactionsApi.update(transaction.id, realEstateData);
           toast({ title: "Transaction updated successfully" });
         } else {
-          await realEstateTransactionsApi.create(transactionData);
+          await realEstateTransactionsApi.create(realEstateData);
           toast({ title: "Transaction created successfully" });
         }
       } else {
+        const generalData = {
+          type: values.type,
+          amount: values.amount,
+          description: values.description,
+          category: values.category,
+          date: new Date(values.date),
+          fromAccountId: (values as any).fromAccountId || null,
+          toAccountId: (values as any).toAccountId || null,
+        };
+
         if (isEditing) {
-          await generalTransactionsApi.update(transaction.id, transactionData);
+          await generalTransactionsApi.update(transaction.id, generalData);
           toast({ title: "Transaction updated successfully" });
         } else {
-          await generalTransactionsApi.create(transactionData);
+          await generalTransactionsApi.create(generalData);
           
           // If category is 'Device', also create a device record
           if (values.category === "Device" && values.deviceName) {
@@ -140,7 +202,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               type: values.deviceType || "electronics",
               serialNumber: values.deviceSerialNumber || "",
               purchaseDate: new Date(values.date),
-              purchasePrice: parseFloat(values.amount),
+              purchasePrice: values.amount,
               warrantyExpiry: values.deviceWarrantyExpiry ? new Date(values.deviceWarrantyExpiry) : undefined,
               alertDaysBefore: values.deviceAlertDaysBefore || 30,
               location: values.deviceLocation || "",
@@ -195,6 +257,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                     <SelectContent>
                       <SelectItem value="income">Income</SelectItem>
                       <SelectItem value="expense">Expense</SelectItem>
+                      {!isRealEstate && <SelectItem value="transfer">Transfer</SelectItem>}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -262,6 +325,91 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                 </FormItem>
               )}
             />
+
+            {/* Account Selection for General Finances */}
+            {!isRealEstate && (
+              <>
+                {/* Transfer fields */}
+                {isTransfer ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="fromAccountId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>From Account</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select from account" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {settings.bankAccounts.map((account) => (
+                                <SelectItem key={account.id} value={account.id}>
+                                  {account.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="toAccountId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>To Account</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select to account" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {settings.bankAccounts.map((account) => (
+                                <SelectItem key={account.id} value={account.id}>
+                                  {account.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                ) : (
+                  /* Regular transaction account field */
+                  <FormField
+                    control={form.control}
+                    name="toAccountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select account" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {settings.bankAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </>
+            )}
 
             {/* Device-specific fields when category is 'Device' */}
             {isDeviceCategory && (
@@ -461,7 +609,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Property</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value ? String(field.value) : ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select property" />
