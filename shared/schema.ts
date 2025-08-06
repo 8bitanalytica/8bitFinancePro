@@ -75,6 +75,10 @@ export const deviceTransactions = pgTable("device_transactions", {
 export const insertGeneralTransactionSchema = createInsertSchema(generalTransactions).omit({
   id: true,
   createdAt: true,
+}).extend({
+  date: z.string().or(z.date()).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
 });
 
 export const insertPropertySchema = createInsertSchema(properties).omit({
@@ -85,6 +89,10 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
 export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTransactions).omit({
   id: true,
   createdAt: true,
+}).extend({
+  date: z.string().or(z.date()).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
 });
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
@@ -95,6 +103,10 @@ export const insertDeviceSchema = createInsertSchema(devices).omit({
 export const insertDeviceTransactionSchema = createInsertSchema(deviceTransactions).omit({
   id: true,
   createdAt: true,
+}).extend({
+  date: z.string().or(z.date()).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
 });
 
 // Types

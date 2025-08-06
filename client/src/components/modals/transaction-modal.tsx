@@ -165,7 +165,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           amount: values.amount,
           description: values.description,
           category: values.category,
-          date: new Date(values.date),
+          date: values.date,
           propertyId: (values as any).propertyId || 0,
         };
 
@@ -182,7 +182,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           amount: values.amount,
           description: values.description,
           category: values.category,
-          date: new Date(values.date),
+          date: values.date,
           fromAccountId: (values as any).fromAccountId || null,
           toAccountId: (values as any).toAccountId || null,
         };
@@ -338,7 +338,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>From Account</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select from account" />
@@ -362,7 +362,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>To Account</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select to account" />
@@ -389,7 +389,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Account</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select account" />
