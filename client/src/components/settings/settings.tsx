@@ -1214,7 +1214,7 @@ npm run build && npm start # production`;
           // Clean up temp account
           localStorage.removeItem('tempAccount');
         }}
-        accountId={selectedAccountForConnection}
+        accountId={selectedAccountForConnection || undefined}
       />
     </div>
   );

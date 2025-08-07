@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Plus, Eye } from "lucide-react";
+import { CreditCard, Plus, Eye, BarChart3, Wallet, TrendingUp, Coins } from "lucide-react";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -87,23 +87,28 @@ export default function AccountsSidebar({
     }).length;
   };
 
-  return (
-    <div className="w-80 bg-gray-50 border-r border-gray-200 h-screen overflow-y-auto">
-      <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Accounts</h3>
-          <div className="flex gap-2">
-            <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
-              Add Transaction
-            </Button>
-          </div>
+  // Organize accounts by type
+  const cashAccounts = settings.bankAccounts.filter(account => 
+    account.type === "checking" || account.type === "savings"
+  );
+  const creditAccounts = settings.bankAccounts.filter(account => 
+    account.type === "credit"
+  );
+  const investmentAccounts = settings.bankAccounts.filter(account => 
+    account.type === "investment"
+  );
+
+  const renderAccountSection = (accounts: any[], title: string, icon: React.ReactNode) => {
+    if (accounts.length === 0) return null;
+    
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 pt-2">
+          {icon}
+          <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{title}</h4>
         </div>
-
-
-
-        {/* Individual Accounts */}
-        <div className="space-y-3">
-          {settings.bankAccounts.map((account) => {
+        <div className="space-y-2">
+          {accounts.map((account) => {
             const balance = calculateAccountBalance(account.id);
             const transactionCount = getAccountTransactionCount(account.id);
             const isSelected = selectedAccountId === account.id;
@@ -154,6 +159,44 @@ export default function AccountsSidebar({
             );
           })}
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-80 bg-gray-50 border-r border-gray-200 h-screen overflow-y-auto">
+      <div className="p-4 space-y-4">
+        {/* Dashboard Menu Item */}
+        <Card className="cursor-pointer transition-all hover:shadow-md hover:bg-white">
+          <CardContent 
+            className="p-4"
+            onClick={() => setLocation('/')}
+          >
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-full bg-blue-100">
+                <BarChart3 className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900">Dashboard</h4>
+                <p className="text-xs text-gray-500">Overview & Analytics</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">Accounts</h3>
+          <div className="flex gap-2">
+            <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
+              Add Transaction
+            </Button>
+          </div>
+        </div>
+
+        {/* Account Sections */}
+        {renderAccountSection(cashAccounts, "Cash Accounts", <Wallet className="h-4 w-4 text-green-600" />)}
+        {renderAccountSection(creditAccounts, "Credits", <CreditCard className="h-4 w-4 text-red-600" />)}
+        {renderAccountSection(investmentAccounts, "Investments", <TrendingUp className="h-4 w-4 text-purple-600" />)}
 
         {/* Account Management */}
         <Card className="bg-white border-dashed border-2 border-gray-300">
