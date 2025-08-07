@@ -56,6 +56,17 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   // For now, use general categories until form is initialized
   const categories = isRealEstate ? settings.realEstateCategories : settings.generalCategories;
 
+  // Recurring transaction states
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringData, setRecurringData] = useState({
+    name: "",
+    frequency: "monthly",
+    intervalCount: 1,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: undefined as string | undefined,
+    totalOccurrences: undefined as number | undefined,
+  });
+
   // Real Estate subcategories
   const realEstateSubcategories = [
     "Gas",
@@ -412,6 +423,37 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           }
         } else {
           await generalTransactionsApi.create(generalData);
+          
+          // If recurring is enabled, create a recurring transaction
+          if (isRecurring && values.type === "expense") {
+            const recurringTransactionData = {
+              module: "general",
+              name: recurringData.name || values.description,
+              type: values.type,
+              amount: values.amount,
+              description: values.description,
+              category: values.category,
+              frequency: recurringData.frequency,
+              intervalCount: recurringData.intervalCount,
+              startDate: new Date(recurringData.startDate),
+              endDate: recurringData.endDate ? new Date(recurringData.endDate) : null,
+              totalOccurrences: recurringData.totalOccurrences || null,
+              accountId: (values as any).toAccountId,
+              isActive: true,
+            };
+            
+            try {
+              await fetch('/api/recurring-transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(recurringTransactionData),
+              });
+              toast({ title: "Transaction and recurring schedule created successfully" });
+            } catch (error) {
+              console.error('Error creating recurring transaction:', error);
+              toast({ title: "Transaction created, but recurring schedule failed" });
+            }
+          }
           
           // If category is 'Device', also create a device record
           if (values.category === "Device" && values.deviceName) {
@@ -780,6 +822,119 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                   </FormItem>
                 )}
               />
+
+              {/* Recurring Transaction Section - Only for Expenses */}
+              {(watchedType === "expense" && !isRealEstate) && (
+                <div className="space-y-4 p-4 border rounded-lg bg-purple-50">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isRecurring"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <label htmlFor="isRecurring" className="text-sm font-medium text-purple-900">
+                      🔄 Make this a recurring expense
+                    </label>
+                  </div>
+
+                  {isRecurring && (
+                    <div className="space-y-4 mt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Frequency
+                          </label>
+                          <select
+                            value={recurringData.frequency}
+                            onChange={(e) => setRecurringData(prev => ({ ...prev, frequency: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          >
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Every
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={recurringData.intervalCount}
+                            onChange={(e) => setRecurringData(prev => ({ ...prev, intervalCount: parseInt(e.target.value) || 1 }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={recurringData.startDate}
+                            onChange={(e) => setRecurringData(prev => ({ ...prev, startDate: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            End Date (Optional)
+                          </label>
+                          <input
+                            type="date"
+                            value={recurringData.endDate || ""}
+                            onChange={(e) => setRecurringData(prev => ({ ...prev, endDate: e.target.value || undefined }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Recurring Name
+                          </label>
+                          <input
+                            type="text"
+                            value={recurringData.name}
+                            onChange={(e) => setRecurringData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Monthly Rent, Weekly Groceries, etc."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Total Occurrences (Optional)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={recurringData.totalOccurrences || ""}
+                            onChange={(e) => setRecurringData(prev => ({ ...prev, totalOccurrences: e.target.value ? parseInt(e.target.value) : undefined }))}
+                            placeholder="Leave empty for infinite"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-purple-600 bg-purple-100 p-2 rounded">
+                        <strong>Note:</strong> This will create a recurring expense that automatically generates transactions on the specified schedule. You can manage all recurring transactions from the Dashboard.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <FormField
                 control={form.control}
