@@ -146,7 +146,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       ...(isRealEstate && { propertyId: 0 }),
       // Account fields (only for general finances)
       ...(!isRealEstate && {
-        fromAccountId: "",
+        fromAccountId: selectedAccountId || "",
         toAccountId: selectedAccountId || "",
       }),
       // Device fields defaults
@@ -171,9 +171,22 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const isDeviceCategory = watchedCategory === "Device";
   const isTransfer = watchedType === "transfer";
 
-  const selectedAccount = watchedToAccountId 
+  // When there's a selectedAccountId, get that account info
+  // Otherwise use the account from the form
+  const selectedAccount = selectedAccountId 
+    ? settings.bankAccounts.find(acc => acc.id === selectedAccountId)
+    : watchedToAccountId 
     ? settings.bankAccounts.find(acc => acc.id === watchedToAccountId)
     : null;
+
+  // Update form values when switching to transfer and there's a selectedAccountId
+  useEffect(() => {
+    if (isTransfer && selectedAccountId && !isEditing) {
+      form.setValue("fromAccountId", selectedAccountId);
+      // Clear toAccountId to force user to select destination
+      form.setValue("toAccountId", "");
+    }
+  }, [isTransfer, selectedAccountId, form, isEditing]);
 
   const watchedFromAccountId = form.watch("fromAccountId");
   const fromAccount = watchedFromAccountId 
@@ -419,47 +432,151 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               <>
                 {/* Transfer fields */}
                 {isTransfer ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="fromAccountId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>From Account</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select from account" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {settings.bankAccounts.map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  {account.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  selectedAccountId ? (
+                    /* When in an account context, show the selected account as "From" and dropdown for "To" */
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <FormLabel>From Account</FormLabel>
+                        <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                          <div className="flex items-center space-x-3">
+                            <div 
+                              className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                              style={{ backgroundColor: selectedAccount?.color }}
+                            />
+                            <div>
+                              <span className="font-medium text-gray-900">{selectedAccount?.name}</span>
+                              <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
+                            </div>
+                          </div>
+                          <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                            Current Account
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="toAccountId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>To Account</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select destination account" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {settings.bankAccounts
+                                  .filter(account => account.id !== selectedAccountId)
+                                  .map((account) => (
+                                  <SelectItem key={account.id} value={account.id}>
+                                    {account.name} ({account.currency})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ) : (
+                    /* No account pre-selected - show both dropdowns */
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="fromAccountId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>From Account</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select from account" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {settings.bankAccounts.map((account) => (
+                                  <SelectItem key={account.id} value={account.id}>
+                                    {account.name} ({account.currency})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="toAccountId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>To Account</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select to account" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {settings.bankAccounts.map((account) => (
+                                  <SelectItem key={account.id} value={account.id}>
+                                    {account.name} ({account.currency})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )
+                ) : (
+                  /* Regular transaction account field */
+                  selectedAccountId ? (
+                    /* Account is pre-selected from sidebar - show read-only info */
+                    <div className="space-y-2">
+                      <FormLabel>Account</FormLabel>
+                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex items-center space-x-3">
+                          <div 
+                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                            style={{ backgroundColor: selectedAccount?.color }}
+                          />
+                          <div>
+                            <span className="font-medium text-gray-900">{selectedAccount?.name}</span>
+                            <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                          Pre-selected
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Transaction will be added to this account. Currency: {selectedAccount?.currency}
+                      </p>
+                    </div>
+                  ) : (
+                    /* No account pre-selected - show dropdown */
                     <FormField
                       control={form.control}
                       name="toAccountId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>To Account</FormLabel>
+                          <FormLabel>Account</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value as string || undefined}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select to account" />
+                                <SelectValue placeholder="Select account" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {settings.bankAccounts.map((account) => (
                                 <SelectItem key={account.id} value={account.id}>
-                                  {account.name}
+                                  {account.name} ({account.currency})
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -468,33 +585,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                         </FormItem>
                       )}
                     />
-                  </div>
-                ) : (
-                  /* Regular transaction account field */
-                  <FormField
-                    control={form.control}
-                    name="toAccountId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Account</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select account" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {settings.bankAccounts.map((account) => (
-                              <SelectItem key={account.id} value={account.id}>
-                                {account.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  )
                 )}
               </>
             )}
