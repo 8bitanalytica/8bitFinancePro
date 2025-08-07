@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Save, Settings as SettingsIcon, Copy, Check, TrendingUp, TrendingDown, ArrowUpDown } from "lucide-react";
+import { Plus, X, Save, Settings as SettingsIcon, Copy, Check, TrendingUp, TrendingDown, ArrowUpDown, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { BankConnectionsList } from "@/components/bank-connections";
 
 interface BankAccount {
   id: string;
@@ -740,6 +741,19 @@ npm run build && npm start # production`;
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Bank Connections */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              Bank Connections
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BankConnectionsList />
           </CardContent>
         </Card>
 

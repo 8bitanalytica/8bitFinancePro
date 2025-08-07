@@ -124,3 +124,6 @@ export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 
 export type DeviceTransaction = typeof deviceTransactions.$inferSelect;
 export type InsertDeviceTransaction = z.infer<typeof insertDeviceTransactionSchema>;
+
+// Export bank connection tables
+export * from "./bank-connection-schema";

@@ -6,8 +6,12 @@ import {
   insertPropertySchema,
   insertRealEstateTransactionSchema,
   insertDeviceSchema,
-  insertDeviceTransactionSchema
+  insertDeviceTransactionSchema,
+  insertBankConnectionSchema,
+  insertTransactionImportSchema,
 } from "@shared/schema";
+import { ProviderFactory } from "./bank-providers/provider-factory";
+import type { TransactionData } from "./bank-providers/base-provider";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -354,6 +358,267 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete transaction" });
+    }
+  });
+
+  // Bank Connections Routes
+  app.get("/api/bank-connections", async (req, res) => {
+    try {
+      const connections = await storage.getBankConnections();
+      res.json(connections);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bank connections" });
+    }
+  });
+
+  app.get("/api/bank-connections/account/:accountId", async (req, res) => {
+    try {
+      const accountId = req.params.accountId;
+      const connections = await storage.getBankConnectionsByAccount(accountId);
+      res.json(connections);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bank connections" });
+    }
+  });
+
+  app.post("/api/bank-connections", async (req, res) => {
+    try {
+      const validatedData = insertBankConnectionSchema.parse(req.body);
+      
+      // Test connection before saving
+      const provider = ProviderFactory.createProvider(
+        validatedData.provider as any,
+        { 
+          apiKey: validatedData.accessToken,
+          accessToken: validatedData.accessToken,
+          refreshToken: validatedData.refreshToken || undefined
+        }
+      );
+      
+      const isValid = await provider.validateCredentials();
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid credentials" });
+      }
+      
+      const connection = await storage.createBankConnection(validatedData);
+      res.status(201).json(connection);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create bank connection" });
+    }
+  });
+
+  app.put("/api/bank-connections/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertBankConnectionSchema.partial().parse(req.body);
+      const connection = await storage.updateBankConnection(id, validatedData);
+      if (!connection) {
+        return res.status(404).json({ message: "Bank connection not found" });
+      }
+      res.json(connection);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update bank connection" });
+    }
+  });
+
+  app.delete("/api/bank-connections/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteBankConnection(id);
+      if (!success) {
+        return res.status(404).json({ message: "Bank connection not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete bank connection" });
+    }
+  });
+
+  // Bank Data Import Routes
+  app.post("/api/bank-connections/:id/sync", async (req, res) => {
+    try {
+      const connectionId = parseInt(req.params.id);
+      const { startDate, endDate, limit = 100 } = req.body;
+      
+      const connection = await storage.getBankConnection(connectionId);
+      if (!connection) {
+        return res.status(404).json({ message: "Bank connection not found" });
+      }
+      
+      if (!connection.isActive) {
+        return res.status(400).json({ message: "Bank connection is inactive" });
+      }
+      
+      const provider = ProviderFactory.createProvider(
+        connection.provider as any,
+        {
+          apiKey: connection.accessToken,
+          accessToken: connection.accessToken,
+          refreshToken: connection.refreshToken || undefined
+        }
+      );
+      
+      const transactions = await provider.getTransactions(
+        new Date(startDate),
+        new Date(endDate),
+        limit
+      );
+      
+      const importedTransactions = [];
+      
+      for (const tx of transactions) {
+        // Check if transaction already imported
+        const existingImports = await storage.getTransactionImportsByConnection(connectionId);
+        const alreadyImported = existingImports.some(
+          imp => imp.externalTransactionId === tx.id
+        );
+        
+        if (!alreadyImported) {
+          // Create import record
+          const importRecord = await storage.createTransactionImport({
+            connectionId,
+            externalTransactionId: tx.id,
+            rawData: tx,
+            status: "pending"
+          });
+          
+          // Convert to internal transaction format
+          const internalTransaction = {
+            type: tx.type === 'credit' ? 'income' : 'expense',
+            amount: tx.amount.toString(),
+            description: `${tx.description} (imported from ${connection.provider})`,
+            category: tx.category || 'Imported',
+            date: tx.date,
+            fromAccountId: tx.type === 'debit' ? connection.accountId : null,
+            toAccountId: tx.type === 'credit' ? connection.accountId : null,
+          };
+          
+          // Create the actual transaction
+          const createdTransaction = await storage.createGeneralTransaction(internalTransaction);
+          
+          // Update import record with transaction ID
+          await storage.updateTransactionImport(importRecord.id, {
+            importedTransactionId: createdTransaction.id,
+            status: "imported"
+          });
+          
+          importedTransactions.push({
+            importRecord,
+            transaction: createdTransaction,
+            originalData: tx
+          });
+        }
+      }
+      
+      // Update last sync time
+      await storage.updateBankConnection(connectionId, {
+        lastSyncAt: new Date()
+      });
+      
+      res.json({
+        message: `Successfully imported ${importedTransactions.length} transactions`,
+        imported: importedTransactions.length,
+        total: transactions.length,
+        transactions: importedTransactions
+      });
+      
+    } catch (error) {
+      console.error('Bank sync error:', error);
+      res.status(500).json({ 
+        message: "Failed to sync bank data", 
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/bank-connections/:id/test", async (req, res) => {
+    try {
+      const connectionId = parseInt(req.params.id);
+      const connection = await storage.getBankConnection(connectionId);
+      
+      if (!connection) {
+        return res.status(404).json({ message: "Bank connection not found" });
+      }
+      
+      const provider = ProviderFactory.createProvider(
+        connection.provider as any,
+        {
+          apiKey: connection.accessToken,
+          accessToken: connection.accessToken,
+          refreshToken: connection.refreshToken || undefined
+        }
+      );
+      
+      const isValid = await provider.validateCredentials();
+      const accountInfo = isValid ? await provider.getAccountInfo() : null;
+      const capabilities = provider.getCapabilities();
+      
+      res.json({
+        isValid,
+        accountInfo,
+        capabilities,
+        provider: connection.provider
+      });
+      
+    } catch (error) {
+      console.error('Bank test error:', error);
+      res.status(500).json({ 
+        message: "Failed to test bank connection",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.get("/api/supported-providers", async (req, res) => {
+    try {
+      const providers = ProviderFactory.getSupportedProviders().map(provider => ({
+        id: provider,
+        ...ProviderFactory.getProviderInfo(provider)
+      }));
+      
+      res.json(providers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch supported providers" });
+    }
+  });
+
+  // Test credentials route for bank connections
+  app.post("/api/bank-connections/test-credentials", async (req, res) => {
+    try {
+      const { provider, accessToken, refreshToken } = req.body;
+      
+      const bankProvider = ProviderFactory.createProvider(
+        provider,
+        {
+          apiKey: accessToken,
+          accessToken: accessToken,
+          refreshToken: refreshToken
+        }
+      );
+      
+      const isValid = await bankProvider.validateCredentials();
+      const accountInfo = isValid ? await bankProvider.getAccountInfo() : null;
+      const capabilities = bankProvider.getCapabilities();
+      
+      res.json({
+        isValid,
+        accountInfo,
+        capabilities,
+        provider
+      });
+      
+    } catch (error) {
+      console.error('Credential test error:', error);
+      res.status(500).json({ 
+        message: "Failed to test credentials",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

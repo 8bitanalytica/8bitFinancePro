@@ -9,11 +9,17 @@ import {
   InsertDevice,
   DeviceTransaction,
   InsertDeviceTransaction,
+  BankConnection,
+  InsertBankConnection,
+  TransactionImport,
+  InsertTransactionImport,
   generalTransactions,
   properties,
   realEstateTransactions,
   devices,
-  deviceTransactions
+  deviceTransactions,
+  bankConnections,
+  transactionImports
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -55,6 +61,20 @@ export interface IStorage {
   createDeviceTransaction(transaction: InsertDeviceTransaction): Promise<DeviceTransaction>;
   updateDeviceTransaction(id: number, transaction: Partial<InsertDeviceTransaction>): Promise<DeviceTransaction | undefined>;
   deleteDeviceTransaction(id: number): Promise<boolean>;
+  
+  // Bank Connections
+  getBankConnections(): Promise<BankConnection[]>;
+  getBankConnectionsByAccount(accountId: string): Promise<BankConnection[]>;
+  getBankConnection(id: number): Promise<BankConnection | undefined>;
+  createBankConnection(connection: InsertBankConnection): Promise<BankConnection>;
+  updateBankConnection(id: number, connection: Partial<InsertBankConnection>): Promise<BankConnection | undefined>;
+  deleteBankConnection(id: number): Promise<boolean>;
+  
+  // Transaction Imports
+  getTransactionImports(): Promise<TransactionImport[]>;
+  getTransactionImportsByConnection(connectionId: number): Promise<TransactionImport[]>;
+  createTransactionImport(importRecord: InsertTransactionImport): Promise<TransactionImport>;
+  updateTransactionImport(id: number, importRecord: Partial<InsertTransactionImport>): Promise<TransactionImport | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -63,11 +83,15 @@ export class MemStorage implements IStorage {
   private realEstateTransactions: Map<number, RealEstateTransaction>;
   private devices: Map<number, Device>;
   private deviceTransactions: Map<number, DeviceTransaction>;
+  private bankConnections: Map<number, BankConnection>;
+  private transactionImports: Map<number, TransactionImport>;
   private currentGeneralTransactionId: number;
   private currentPropertyId: number;
   private currentRealEstateTransactionId: number;
   private currentDeviceId: number;
   private currentDeviceTransactionId: number;
+  private currentBankConnectionId: number;
+  private currentTransactionImportId: number;
 
   constructor() {
     this.generalTransactions = new Map();
@@ -75,11 +99,15 @@ export class MemStorage implements IStorage {
     this.realEstateTransactions = new Map();
     this.devices = new Map();
     this.deviceTransactions = new Map();
+    this.bankConnections = new Map();
+    this.transactionImports = new Map();
     this.currentGeneralTransactionId = 1;
     this.currentPropertyId = 1;
     this.currentRealEstateTransactionId = 1;
     this.currentDeviceId = 1;
     this.currentDeviceTransactionId = 1;
+    this.currentBankConnectionId = 1;
+    this.currentTransactionImportId = 1;
   }
 
   // General Transactions
@@ -276,6 +304,83 @@ export class MemStorage implements IStorage {
   async deleteDeviceTransaction(id: number): Promise<boolean> {
     return this.deviceTransactions.delete(id);
   }
+
+  // Bank Connections
+  async getBankConnections(): Promise<BankConnection[]> {
+    return Array.from(this.bankConnections.values()).sort((a, b) => 
+      new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
+    );
+  }
+
+  async getBankConnectionsByAccount(accountId: string): Promise<BankConnection[]> {
+    return Array.from(this.bankConnections.values())
+      .filter(c => c.accountId === accountId);
+  }
+
+  async getBankConnection(id: number): Promise<BankConnection | undefined> {
+    return this.bankConnections.get(id);
+  }
+
+  async createBankConnection(insertConnection: InsertBankConnection): Promise<BankConnection> {
+    const id = this.currentBankConnectionId++;
+    const connection: BankConnection = {
+      ...insertConnection,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.bankConnections.set(id, connection);
+    return connection;
+  }
+
+  async updateBankConnection(id: number, updates: Partial<InsertBankConnection>): Promise<BankConnection | undefined> {
+    const existing = this.bankConnections.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { 
+      ...existing, 
+      ...updates,
+      updatedAt: new Date()
+    };
+    this.bankConnections.set(id, updated);
+    return updated;
+  }
+
+  async deleteBankConnection(id: number): Promise<boolean> {
+    return this.bankConnections.delete(id);
+  }
+
+  // Transaction Imports
+  async getTransactionImports(): Promise<TransactionImport[]> {
+    return Array.from(this.transactionImports.values()).sort((a, b) => 
+      new Date(b.importedAt!).getTime() - new Date(a.importedAt!).getTime()
+    );
+  }
+
+  async getTransactionImportsByConnection(connectionId: number): Promise<TransactionImport[]> {
+    return Array.from(this.transactionImports.values())
+      .filter(i => i.connectionId === connectionId);
+  }
+
+  async createTransactionImport(insertImport: InsertTransactionImport): Promise<TransactionImport> {
+    const id = this.currentTransactionImportId++;
+    const importRecord: TransactionImport = {
+      ...insertImport,
+      id,
+      importedAt: new Date(),
+    };
+    this.transactionImports.set(id, importRecord);
+    return importRecord;
+  }
+
+  async updateTransactionImport(id: number, updates: Partial<InsertTransactionImport>): Promise<TransactionImport | undefined> {
+    const existing = this.transactionImports.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.transactionImports.set(id, updated);
+    return updated;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -301,7 +406,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGeneralTransaction(id: number): Promise<boolean> {
     const result = await db.delete(generalTransactions).where(eq(generalTransactions.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Properties
@@ -326,7 +431,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProperty(id: number): Promise<boolean> {
     const result = await db.delete(properties).where(eq(properties.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Real Estate Transactions
@@ -355,7 +460,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRealEstateTransaction(id: number): Promise<boolean> {
     const result = await db.delete(realEstateTransactions).where(eq(realEstateTransactions.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Devices
@@ -380,7 +485,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDevice(id: number): Promise<boolean> {
     const result = await db.delete(devices).where(eq(devices.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Device Transactions
@@ -409,7 +514,55 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDeviceTransaction(id: number): Promise<boolean> {
     const result = await db.delete(deviceTransactions).where(eq(deviceTransactions.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Bank Connections
+  async getBankConnections(): Promise<BankConnection[]> {
+    return await db.select().from(bankConnections).orderBy(bankConnections.createdAt);
+  }
+
+  async getBankConnectionsByAccount(accountId: string): Promise<BankConnection[]> {
+    return await db.select().from(bankConnections).where(eq(bankConnections.accountId, accountId));
+  }
+
+  async getBankConnection(id: number): Promise<BankConnection | undefined> {
+    const [result] = await db.select().from(bankConnections).where(eq(bankConnections.id, id));
+    return result;
+  }
+
+  async createBankConnection(connection: InsertBankConnection): Promise<BankConnection> {
+    const [result] = await db.insert(bankConnections).values(connection).returning();
+    return result;
+  }
+
+  async updateBankConnection(id: number, connection: Partial<InsertBankConnection>): Promise<BankConnection | undefined> {
+    const [result] = await db.update(bankConnections).set(connection).where(eq(bankConnections.id, id)).returning();
+    return result;
+  }
+
+  async deleteBankConnection(id: number): Promise<boolean> {
+    const result = await db.delete(bankConnections).where(eq(bankConnections.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Transaction Imports
+  async getTransactionImports(): Promise<TransactionImport[]> {
+    return await db.select().from(transactionImports).orderBy(transactionImports.importedAt);
+  }
+
+  async getTransactionImportsByConnection(connectionId: number): Promise<TransactionImport[]> {
+    return await db.select().from(transactionImports).where(eq(transactionImports.connectionId, connectionId));
+  }
+
+  async createTransactionImport(importRecord: InsertTransactionImport): Promise<TransactionImport> {
+    const [result] = await db.insert(transactionImports).values(importRecord).returning();
+    return result;
+  }
+
+  async updateTransactionImport(id: number, importRecord: Partial<InsertTransactionImport>): Promise<TransactionImport | undefined> {
+    const [result] = await db.update(transactionImports).set(importRecord).where(eq(transactionImports.id, id)).returning();
+    return result;
   }
 }
 

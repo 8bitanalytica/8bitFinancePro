@@ -28,12 +28,14 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### Database Schema
-The application now uses PostgreSQL with five main tables:
+The application now uses PostgreSQL with seven main tables:
 - `general_transactions`: For tracking personal income/expenses with account-specific currency support
 - `properties`: For managing real estate properties
 - `real_estate_transactions`: For tracking property-related transactions
 - `devices`: For managing technology devices and equipment with receipt/device images, warranty tracking, and expiration alerts
 - `device_transactions`: For tracking device-related expenses and maintenance
+- `bank_connections`: For storing encrypted API credentials and sync settings for external bank providers
+- `transaction_imports`: For tracking imported transactions and preventing duplicates
 
 ### Currency Architecture
 The application implements a per-account currency system where:
@@ -57,6 +59,7 @@ The application includes a comprehensive settings system with:
 - **Settings Persistence**: All settings stored in localStorage for session persistence
 - **Import/Export**: Settings backup and restore functionality
 - **Technology Stack Documentation**: Complete VPS setup guide with installation commands, dependencies, and production configuration
+- **Bank Integration System**: Secure read-only API connections with Wise and Revolut for automatic transaction import
 
 ### Enhanced Device Management
 The device management system now includes:
@@ -66,6 +69,16 @@ The device management system now includes:
 - **Warranty Expiration Alerts**: Configurable alerts for devices approaching warranty expiration
 - **Visual Device Cards**: Enhanced display with device images and warranty status
 - **Device Status Tracking**: Active/inactive status tracking for comprehensive device lifecycle management
+
+### Bank Integration System
+The application includes a comprehensive bank connection system:
+- **Supported Providers**: Wise and Revolut with extensible architecture for additional providers
+- **Secure Authentication**: API tokens stored encrypted, read-only access only
+- **Automatic Import**: Fetch transactions with configurable date ranges and frequency
+- **Duplicate Prevention**: Transaction tracking system prevents duplicate imports
+- **Multi-Provider Support**: Factory pattern allows easy addition of new banking services
+- **Connection Testing**: Validate credentials and account access before saving
+- **Sync Management**: Manual and automatic synchronization with customizable settings
 
 ### Frontend Components
 - **Dashboard**: Main application interface with module switching
@@ -80,6 +93,8 @@ The device management system now includes:
 - **Route Handlers**: RESTful endpoints for all CRUD operations
 - **Validation**: Zod schema validation for all API inputs
 - **Database Connection**: Neon PostgreSQL with Drizzle ORM
+- **Bank Provider System**: Modular architecture with base provider class and specific implementations
+- **Import Service**: Transaction processing and deduplication system
 
 ## Data Flow
 
