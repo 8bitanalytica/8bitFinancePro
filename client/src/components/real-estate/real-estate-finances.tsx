@@ -23,7 +23,7 @@ export default function RealEstateFinances() {
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<RealEstateTransaction | undefined>();
   const [editingProperty, setEditingProperty] = useState<Property | undefined>();
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [visibleTransactions, setVisibleTransactions] = useState(30);
@@ -55,7 +55,7 @@ export default function RealEstateFinances() {
 
     // Apply category and search filters
     filtered = filtered.filter(transaction => {
-      const matchesCategory = !categoryFilter || categoryFilter === "all" || transaction.category === categoryFilter;
+      const matchesCategory = categoryFilter === "all" || transaction.category === categoryFilter;
       const matchesSearch = !searchQuery || 
         transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.category.toLowerCase().includes(searchQuery.toLowerCase());
@@ -260,7 +260,7 @@ export default function RealEstateFinances() {
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {settings.realEstateCategories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}

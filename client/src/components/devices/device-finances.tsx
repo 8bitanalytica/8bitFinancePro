@@ -23,7 +23,7 @@ export default function DeviceFinances() {
   const [showDeviceModal, setShowDeviceModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<DeviceTransaction | undefined>();
   const [editingDevice, setEditingDevice] = useState<Device | undefined>();
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [visibleTransactions, setVisibleTransactions] = useState(30);
@@ -55,7 +55,7 @@ export default function DeviceFinances() {
 
     // Apply category and search filters
     filtered = filtered.filter(transaction => {
-      const matchesCategory = !categoryFilter || categoryFilter === "all" || transaction.category === categoryFilter;
+      const matchesCategory = categoryFilter === "all" || transaction.category === categoryFilter;
       const matchesSearch = !searchQuery || 
         transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.category.toLowerCase().includes(searchQuery.toLowerCase());
@@ -259,7 +259,7 @@ export default function DeviceFinances() {
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {deviceCategories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
