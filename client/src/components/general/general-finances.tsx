@@ -112,10 +112,11 @@ export default function GeneralFinances() {
   };
 
   const handleDuplicateTransaction = (transaction: GeneralTransaction) => {
-    // Create a copy of the transaction with today's date and remove the ID
+    // Create a copy of the transaction with current date and time, remove the ID
+    const now = new Date();
     const duplicatedTransaction = {
       ...transaction,
-      date: new Date().toISOString().split('T')[0], // Today's date
+      date: now.toISOString(), // Current date and time
       id: undefined, // Remove ID so it creates a new transaction
     };
     setEditingTransaction(duplicatedTransaction as any);
@@ -321,7 +322,7 @@ export default function GeneralFinances() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Date</TableHead>
+                          <TableHead>Date & Time</TableHead>
                           <TableHead>Type</TableHead>
                           <TableHead>Description</TableHead>
                           <TableHead>Category</TableHead>
@@ -340,7 +341,10 @@ export default function GeneralFinances() {
                           return (
                             <TableRow key={transaction.id}>
                               <TableCell className="font-medium">
-                                {format(new Date(transaction.date), "MMM dd, yyyy")}
+                                <div className="flex flex-col">
+                                  <span>{format(new Date(transaction.date), "MMM dd, yyyy")}</span>
+                                  <span className="text-xs text-gray-500">{format(new Date(transaction.date), "HH:mm")}</span>
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">

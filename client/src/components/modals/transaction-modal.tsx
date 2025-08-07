@@ -34,6 +34,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const baseSchema = isRealEstate ? insertRealEstateTransactionSchema : insertGeneralTransactionSchema;
   const formSchema = baseSchema.extend({
     date: z.string().min(1, "Date is required"),
+    time: z.string().min(1, "Time is required"),
     // Account fields for transfers and regular transactions (only for general finances)
     ...(isRealEstate ? {} : {
       fromAccountId: z.string().optional(),
@@ -105,6 +106,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       description: transaction.description,
       category: transaction.category,
       date: new Date(transaction.date).toISOString().split('T')[0],
+      time: new Date(transaction.date).toTimeString().slice(0, 5),
       ...(isRealEstate && 'propertyId' in transaction && { propertyId: transaction.propertyId }),
       // Account fields (only for general finances)
       ...(!isRealEstate && {
@@ -130,6 +132,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       description: "",
       category: "",
       date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().slice(0, 5),
       ...(isRealEstate && { propertyId: 0 }),
       // Account fields (only for general finances)
       ...(!isRealEstate && {
@@ -165,7 +168,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           amount: values.amount,
           description: values.description,
           category: values.category,
-          date: values.date,
+          date: new Date(`${values.date}T${values.time}:00`),
           propertyId: (values as any).propertyId || 0,
         };
 
@@ -182,7 +185,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           amount: values.amount,
           description: values.description,
           category: values.category,
-          date: values.date,
+          date: new Date(`${values.date}T${values.time}:00`),
           fromAccountId: (values as any).fromAccountId || null,
           toAccountId: (values as any).toAccountId || null,
         };
@@ -629,19 +632,35 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               />
             )}
 
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="time"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex justify-end space-x-3 pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
