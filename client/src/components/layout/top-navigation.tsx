@@ -27,13 +27,13 @@ export default function TopNavigation() {
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-        <div className="flex items-center justify-between h-16 relative">
+        <div className="flex items-center h-16">
           {/* Logo/Title */}
           <div className={cn(
             "flex items-center",
             settings.logoPosition === "left" && "order-1",
-            settings.logoPosition === "center" && "order-2 absolute left-1/2 transform -translate-x-1/2",
-            settings.logoPosition === "right" && "order-3"
+            settings.logoPosition === "center" && "order-2 flex-1 justify-center",
+            settings.logoPosition === "right" && "order-3 ml-auto"
           )}>
             {settings.appLogo && (
               <img 
@@ -48,9 +48,9 @@ export default function TopNavigation() {
           {/* Desktop Navigation */}
           <div className={cn(
             "hidden sm:flex sm:space-x-8",
-            settings.menuPosition === "left" && "order-1",
-            settings.menuPosition === "center" && "order-2 absolute left-1/2 transform -translate-x-1/2",
-            settings.menuPosition === "right" && "order-3"
+            settings.menuPosition === "left" && "order-1 mr-8",
+            settings.menuPosition === "center" && "order-2 flex-1 justify-center",
+            settings.menuPosition === "right" && "order-3 ml-auto"
           )}>
               {navigation.map((item) => {
                 const isActive = location === item.href;
@@ -72,11 +72,8 @@ export default function TopNavigation() {
               })}
             </div>
 
-          {/* Spacer for layout balance */}
-          <div className="order-1 sm:order-none"></div>
-
           {/* Mobile menu button */}
-          <div className="flex items-center sm:hidden order-4">
+          <div className="flex items-center sm:hidden ml-auto">
             <Button
               variant="ghost"
               size="sm"

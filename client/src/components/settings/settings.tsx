@@ -723,9 +723,9 @@ npm run build && npm start # production`;
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="left">Left Aligned</SelectItem>
-                  <SelectItem value="center">Center Aligned</SelectItem>
-                  <SelectItem value="right">Right Aligned</SelectItem>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-gray-500">Choose where the logo and app name are positioned in the top bar</p>
@@ -744,9 +744,9 @@ npm run build && npm start # production`;
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="left">Left Aligned</SelectItem>
-                  <SelectItem value="center">Center Aligned</SelectItem>
-                  <SelectItem value="right">Right Aligned</SelectItem>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-gray-500">Choose where the navigation menu items are positioned in the top bar</p>
