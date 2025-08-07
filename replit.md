@@ -8,6 +8,13 @@ This is a full-stack financial management application built with React (frontend
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- **Dashboard Simplification (2025-08-07)**: Removed redundant dashboard sections from general finances module, keeping only the main dashboard page accessible via sidebar menu
+- **Account Organization (2025-08-07)**: Organized accounts into three sections: Cash Accounts, Credits, and Investments in the sidebar
+- **Recurring Transactions Fix (2025-08-07)**: Removed totalOccurrences field logic and fixed display to show proper end dates and progress
+- **Category System Update (2025-08-07)**: Updated category filters to use new separated category system (income/expense/transfer specific categories)
+
 ## System Architecture
 
 ### Frontend Architecture

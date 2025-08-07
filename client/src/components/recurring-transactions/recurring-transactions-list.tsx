@@ -21,7 +21,7 @@ interface RecurringTransaction {
   endDate?: string;
   nextDueDate: string;
   isActive: boolean;
-  totalOccurrences?: number;
+
   currentOccurrence: number;
   module: string;
 }
@@ -161,9 +161,9 @@ export function RecurringTransactionsList({ onEdit }: RecurringTransactionsListP
                   <span>Category: {transaction.category}</span>
                   <span>Next due: {new Date(transaction.nextDueDate).toLocaleDateString()}</span>
                 </div>
-                {transaction.totalOccurrences && (
+                {transaction.endDate && (
                   <p className="text-xs">
-                    Progress: {transaction.currentOccurrence} / {transaction.totalOccurrences}
+                    Progress: {transaction.currentOccurrence}{transaction.endDate ? ` (ends ${new Date(transaction.endDate).toLocaleDateString()})` : ' (ongoing)'}
                   </p>
                 )}
               </div>

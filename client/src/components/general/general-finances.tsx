@@ -325,96 +325,10 @@ export default function GeneralFinances() {
                 })()}
               </div>
             ) : (
-              // All accounts view - Dashboard with multi-currency statistics and recent transactions
+              // All accounts view - Just show recurring transactions
               <div className="space-y-8">
-                
-
-                {/* Multi-Currency Statistics */}
-                <div className="space-y-6">
-                  {Object.entries(statistics.currencyGroups).map(([currency, stats]) => (
-                    <div key={currency} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                          <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm mr-3">
-                            {currency}
-                          </span>
-                          {currency} Portfolio
-                        </h4>
-                        <div className="text-sm text-gray-500">
-                          {settings.bankAccounts.filter(acc => acc.currency === currency).length} account{settings.bankAccounts.filter(acc => acc.currency === currency).length !== 1 ? 's' : ''}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Card className="border-l-4 border-l-green-500">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Total Income</p>
-                                <p className="text-xl font-bold text-green-600">
-                                  {formatCurrency(stats.income, currency)}
-                                </p>
-                              </div>
-                              <TrendingUp className="h-6 w-6 text-green-600" />
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="border-l-4 border-l-red-500">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-                                <p className="text-xl font-bold text-red-600">
-                                  {formatCurrency(stats.expenses, currency)}
-                                </p>
-                              </div>
-                              <TrendingDown className="h-6 w-6 text-red-600" />
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="border-l-4 border-l-blue-500">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Total Transfers</p>
-                                <p className="text-xl font-bold text-blue-600">
-                                  {formatCurrency(stats.transfers, currency)}
-                                </p>
-                              </div>
-                              <ArrowUpDown className="h-6 w-6 text-blue-600" />
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        <Card className={`border-l-4 ${(stats.income - stats.expenses) >= 0 ? 'border-l-green-500' : 'border-l-red-500'}`}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-gray-600">Net Balance</p>
-                                <p className={`text-xl font-bold ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {formatCurrency(stats.income - stats.expenses, currency)}
-                                </p>
-                              </div>
-                              <Wallet className={`h-6 w-6 ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
                 {/* Recurring Transactions Section */}
                 <RecurringTransactionsList />
-
-                
-
-                {Object.keys(statistics.currencyGroups).length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No transactions found for the selected period</p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -454,7 +368,20 @@ export default function GeneralFinances() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All categories</SelectItem>
-                      {settings.generalCategories.map((category) => (
+                      {/* Income Categories */}
+                      {settings.generalIncomeCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                      {/* Expense Categories */}
+                      {settings.generalExpenseCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                      {/* Transfer Categories */}
+                      {settings.generalTransferCategories.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
                         </SelectItem>
