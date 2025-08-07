@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown, Copy, Repeat } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown, Copy, Repeat, Clock, PieChart, CreditCard, DollarSign, PiggyBank, Landmark, Bitcoin, Users, Smartphone, Building } from "lucide-react";
 import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
 import { RecurringTransactionModal } from "@/components/modals/recurring-transaction-modal";
@@ -325,10 +325,267 @@ export default function GeneralFinances() {
                 })()}
               </div>
             ) : (
-              // All accounts view - Just show recurring transactions
+              // All accounts view - Intelligent Dashboard
               <div className="space-y-8">
-                {/* Recurring Transactions Section */}
-                <RecurringTransactionsList />
+                {/* Upcoming Recurring Transactions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                      Prossime Transazioni Ricorrenti
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">Le tue prossime entrate e uscite programmate</p>
+                  </CardHeader>
+                  <CardContent>
+                    <RecurringTransactionsList />
+                  </CardContent>
+                </Card>
+
+                {/* Monthly Account Analysis */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {settings.bankAccounts.map(account => {
+                    const accountTransactions = transactions.filter(t => 
+                      t.toAccountId === account.id || t.fromAccountId === account.id
+                    );
+                    
+                    // Calculate current month stats
+                    const currentMonth = new Date();
+                    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+                    
+                    const monthlyTransactions = accountTransactions.filter(t => {
+                      const transactionDate = new Date(t.date);
+                      return transactionDate >= startOfMonth && transactionDate <= endOfMonth;
+                    });
+
+                    const monthlyIncome = monthlyTransactions
+                      .filter(t => t.type === 'income' && t.toAccountId === account.id)
+                      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                    const monthlyExpenses = monthlyTransactions
+                      .filter(t => t.type === 'expense' && t.toAccountId === account.id)
+                      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                    const transfersIn = monthlyTransactions
+                      .filter(t => t.type === 'transfer' && t.toAccountId === account.id)
+                      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                    const transfersOut = monthlyTransactions
+                      .filter(t => t.type === 'transfer' && t.fromAccountId === account.id)
+                      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                    // Calculate current balance
+                    let currentBalance = parseFloat(account.balance?.toString() || "0");
+                    accountTransactions.forEach(transaction => {
+                      const amount = parseFloat(transaction.amount);
+                      if (transaction.type === 'income' && transaction.toAccountId === account.id) {
+                        currentBalance += amount;
+                      } else if (transaction.type === 'expense' && transaction.toAccountId === account.id) {
+                        currentBalance -= amount;
+                      } else if (transaction.type === 'transfer') {
+                        if (transaction.toAccountId === account.id) {
+                          currentBalance += amount;
+                        } else if (transaction.fromAccountId === account.id) {
+                          currentBalance -= amount;
+                        }
+                      }
+                    });
+
+                    return (
+                      <Card key={account.id} className="hover:shadow-lg transition-shadow">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="p-2 rounded-full"
+                                style={{ backgroundColor: account.color }}
+                              >
+                                {(() => {
+                                  if (account.iconType === "custom" && account.customIcon) {
+                                    return (
+                                      <img 
+                                        src={account.customIcon} 
+                                        alt="Account icon" 
+                                        className="h-4 w-4 object-cover rounded"
+                                      />
+                                    );
+                                  }
+                                  
+                                  // Default to lucide icons
+                                  const iconName = account.iconName || "CreditCard";
+                                  const iconMap: Record<string, any> = {
+                                    CreditCard,
+                                    Wallet,
+                                    Building,
+                                    DollarSign,
+                                    PiggyBank,
+                                    Landmark,
+                                    Bitcoin,
+                                    TrendingUp,
+                                    Users,
+                                    Smartphone
+                                  };
+                                  
+                                  const IconComponent = iconMap[iconName] || CreditCard;
+                                  return <IconComponent className="h-4 w-4 text-white" />;
+                                })()}
+                              </div>
+                              <div>
+                                <CardTitle className="text-lg">{account.name}</CardTitle>
+                                <p className="text-sm text-gray-600 capitalize">{account.type}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-600">Saldo Attuale</p>
+                              <p className="text-xl font-bold" style={{ color: account.color }}>
+                                {formatCurrency(currentBalance, account.currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {/* Monthly Stats */}
+                          <div>
+                            <p className="text-sm font-medium text-gray-700 mb-3">
+                              Movimento {format(currentMonth, "MMMM yyyy")}
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="text-center p-3 bg-green-50 rounded-lg">
+                                <TrendingUp className="h-5 w-5 text-green-600 mx-auto mb-1" />
+                                <p className="text-sm text-gray-600">Entrate</p>
+                                <p className="font-bold text-green-600">
+                                  {formatCurrency(monthlyIncome + transfersIn, account.currency)}
+                                </p>
+                              </div>
+                              <div className="text-center p-3 bg-red-50 rounded-lg">
+                                <TrendingDown className="h-5 w-5 text-red-600 mx-auto mb-1" />
+                                <p className="text-sm text-gray-600">Uscite</p>
+                                <p className="font-bold text-red-600">
+                                  {formatCurrency(monthlyExpenses + transfersOut, account.currency)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Net Monthly Movement */}
+                          <div className="pt-3 border-t">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Movimento Netto:</span>
+                              <span className={`font-bold ${
+                                (monthlyIncome + transfersIn - monthlyExpenses - transfersOut) >= 0 
+                                  ? 'text-green-600' 
+                                  : 'text-red-600'
+                              }`}>
+                                {formatCurrency(
+                                  monthlyIncome + transfersIn - monthlyExpenses - transfersOut, 
+                                  account.currency
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Category Analysis */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <PieChart className="h-5 w-5 text-purple-600" />
+                      Analisi Spese per Categoria
+                    </CardTitle>
+                    <p className="text-sm text-gray-600">Distribuzione delle tue spese del mese corrente</p>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const currentMonth = new Date();
+                      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+                      
+                      const monthlyExpenses = transactions.filter(t => {
+                        const transactionDate = new Date(t.date);
+                        return t.type === 'expense' && 
+                               transactionDate >= startOfMonth && 
+                               transactionDate <= endOfMonth;
+                      });
+
+                      const categoryTotals = monthlyExpenses.reduce((acc, transaction) => {
+                        const category = transaction.category;
+                        if (!acc[category]) {
+                          acc[category] = { total: 0, count: 0, currency: 'EUR' }; // Default currency
+                        }
+                        acc[category].total += parseFloat(transaction.amount);
+                        acc[category].count += 1;
+                        
+                        // Get currency from account
+                        const account = settings.bankAccounts.find(acc => acc.id === transaction.toAccountId);
+                        if (account) {
+                          acc[category].currency = account.currency;
+                        }
+                        
+                        return acc;
+                      }, {} as Record<string, { total: number; count: number; currency: string }>);
+
+                      const sortedCategories = Object.entries(categoryTotals)
+                        .sort(([,a], [,b]) => b.total - a.total)
+                        .slice(0, 8); // Top 8 categories
+
+                      const totalExpenses = Object.values(categoryTotals).reduce((sum, cat) => sum + cat.total, 0);
+
+                      // Generate colors for categories
+                      const colors = [
+                        '#ef4444', '#f97316', '#eab308', '#22c55e', 
+                        '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'
+                      ];
+
+                      return sortedCategories.length > 0 ? (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {sortedCategories.map(([category, data], index) => {
+                              const percentage = (data.total / totalExpenses * 100).toFixed(1);
+                              return (
+                                <div key={category} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div 
+                                      className="w-4 h-4 rounded-full"
+                                      style={{ backgroundColor: colors[index] }}
+                                    />
+                                    <div>
+                                      <p className="font-medium">{category}</p>
+                                      <p className="text-xs text-gray-600">{data.count} transazioni</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-bold text-red-600">
+                                      {formatCurrency(data.total, data.currency)}
+                                    </p>
+                                    <p className="text-xs text-gray-600">{percentage}%</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          
+                          <div className="pt-4 border-t">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium">Totale Spese {format(currentMonth, "MMMM")}:</span>
+                              <span className="text-xl font-bold text-red-600">
+                                {formatCurrency(totalExpenses, 'EUR')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <PieChart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <p>Nessuna spesa registrata questo mese</p>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
               </div>
             )}
 

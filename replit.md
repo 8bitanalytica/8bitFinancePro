@@ -10,6 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Intelligent Dashboard (2025-08-07)**: Implemented rich financial dashboard with upcoming recurring transactions, per-account monthly analysis, and category spending breakdown with visual analytics
 - **Custom Account Icons (2025-08-07)**: Added ability to select predefined icons or upload custom PNG/JPEG images for bank accounts during creation
 - **Dashboard Removal (2025-08-07)**: Removed standalone dashboard page as requested, keeping only the integrated dashboard functionality within general finances module
 - **Account Organization (2025-08-07)**: Organized accounts into three sections: Cash Accounts, Credits, and Investments in the sidebar
@@ -90,7 +91,7 @@ The application includes a comprehensive bank connection system:
 - **Integrated Workflow**: Bank connections configured directly in account creation modal, not as separate administrative task
 
 ### Frontend Components
-- **Dashboard**: Main application interface with module switching
+- **Intelligent Dashboard**: Rich financial overview with upcoming recurring transactions, per-account monthly analytics, current balances, and category spending analysis with visual breakdown
 - **Sidebar**: Navigation between three modules (general, real estate, devices) with settings moved to tools section
 - **Modal System**: Reusable modals for adding/editing transactions, properties, and devices
 - **Settings Module**: Comprehensive settings management with currency, categories, and bank accounts
