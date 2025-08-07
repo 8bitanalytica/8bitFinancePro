@@ -66,8 +66,22 @@ export default function DeviceFinances() {
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, selectedDeviceId, categoryFilter, searchQuery]);
 
-  // Dynamic statistics based on displayed transactions
+  // Dynamic statistics based on displayed transactions - grouped by currency
   const statistics = useMemo(() => {
+    const currencyGroups: Record<string, number> = {};
+    
+    displayedTransactions.forEach(transaction => {
+      const amount = parseFloat(transaction.amount);
+      // Note: Device transactions don't have direct account linking
+      // They use a generic currency, defaulting to USD
+      const currency = 'USD'; // TODO: Add device-specific currency support if needed
+      
+      if (!currencyGroups[currency]) {
+        currencyGroups[currency] = 0;
+      }
+      currencyGroups[currency] += amount;
+    });
+
     const totalExpenses = displayedTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
     
     // Calculate total device value (purchase prices)

@@ -63,24 +63,56 @@ export default function GeneralFinances() {
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, selectedAccountId, categoryFilter, searchQuery]);
 
-  // Dynamic statistics based on displayed transactions
+  // Dynamic statistics based on displayed transactions - now grouped by currency
   const statistics = useMemo(() => {
-    const totalIncome = displayedTransactions
-      .filter(t => t.type === "income")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    // Group transactions by account currency
+    const currencyGroups: Record<string, { income: number; expenses: number; transfers: number }> = {};
+    
+    displayedTransactions.forEach(transaction => {
+      const amount = parseFloat(transaction.amount);
+      
+      if (transaction.type === "income" || transaction.type === "expense") {
+        const account = settings.bankAccounts.find(acc => acc.id === transaction.toAccountId);
+        const currency = account?.currency || 'USD';
+        
+        if (!currencyGroups[currency]) {
+          currencyGroups[currency] = { income: 0, expenses: 0, transfers: 0 };
+        }
+        
+        if (transaction.type === "income") {
+          currencyGroups[currency].income += amount;
+        } else {
+          currencyGroups[currency].expenses += amount;
+        }
+      } else if (transaction.type === "transfer") {
+        const fromAccount = settings.bankAccounts.find(acc => acc.id === transaction.fromAccountId);
+        const currency = fromAccount?.currency || 'USD';
+        
+        if (!currencyGroups[currency]) {
+          currencyGroups[currency] = { income: 0, expenses: 0, transfers: 0 };
+        }
+        currencyGroups[currency].transfers += amount;
+      }
+    });
 
-    const totalExpenses = displayedTransactions
-      .filter(t => t.type === "expense")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-    const totalTransfers = displayedTransactions
-      .filter(t => t.type === "transfer")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
+    // Calculate totals for legacy compatibility (using USD equivalent or primary currency)
+    const primaryCurrency = Object.keys(currencyGroups)[0] || 'USD';
+    const primaryStats = currencyGroups[primaryCurrency] || { income: 0, expenses: 0, transfers: 0 };
+    
+    const totalIncome = primaryStats.income;
+    const totalExpenses = primaryStats.expenses;
+    const totalTransfers = primaryStats.transfers;
     const netBalance = totalIncome - totalExpenses;
 
-    return { totalIncome, totalExpenses, totalTransfers, netBalance };
-  }, [displayedTransactions]);
+    return { 
+      totalIncome, 
+      totalExpenses, 
+      totalTransfers, 
+      netBalance, 
+      currencyGroups,
+      primaryCurrency 
+    };
+  }, [displayedTransactions, settings.bankAccounts]);
 
   const visibleTransactionsList = displayedTransactions.slice(0, visibleTransactions);
   const hasMoreTransactions = displayedTransactions.length > visibleTransactions;
@@ -209,86 +241,148 @@ export default function GeneralFinances() {
               </div>
             </div>
 
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {selectedAccountId
-                      ? (() => {
-                          const account = settings.bankAccounts.find(acc => acc.id === selectedAccountId);
-                          return formatCurrency(statistics.totalIncome, account?.currency || "USD");
-                        })()
-                      : formatCurrency(statistics.totalIncome)
-                    }
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    From {displayedTransactions.filter(t => t.type === "income").length} transactions
-                  </p>
-                </CardContent>
-              </Card>
+            {/* Statistics Cards - Multi-Currency Support */}
+            {selectedAccountId ? (
+              // Single account view - show stats in account's currency
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {(() => {
+                  const selectedAccount = settings.bankAccounts.find(acc => acc.id === selectedAccountId);
+                  const currency = selectedAccount?.currency || 'USD';
+                  const currencySymbol = formatCurrency(0, currency).replace(/[\d.,\s]/g, '');
+                  
+                  return (
+                    <>
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <TrendingUp className="h-8 w-8 text-green-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Total Income ({currency})</p>
+                              <p className="text-2xl font-bold text-green-600">
+                                {formatCurrency(statistics.totalIncome, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-                  <TrendingDown className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {selectedAccountId
-                      ? (() => {
-                          const account = settings.bankAccounts.find(acc => acc.id === selectedAccountId);
-                          return formatCurrency(statistics.totalExpenses, account?.currency || "USD");
-                        })()
-                      : formatCurrency(statistics.totalExpenses)
-                    }
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    From {displayedTransactions.filter(t => t.type === "expense").length} transactions
-                  </p>
-                </CardContent>
-              </Card>
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <TrendingDown className="h-8 w-8 text-red-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Total Expenses ({currency})</p>
+                              <p className="text-2xl font-bold text-red-600">
+                                {formatCurrency(statistics.totalExpenses, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Transfers</CardTitle>
-                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(statistics.totalTransfers)}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    From {displayedTransactions.filter(t => t.type === "transfer").length} transfers
-                  </p>
-                </CardContent>
-              </Card>
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <ArrowUpDown className="h-8 w-8 text-blue-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Transfers ({currency})</p>
+                              <p className="text-2xl font-bold text-blue-600">
+                                {formatCurrency(statistics.totalTransfers, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${statistics.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedAccountId
-                      ? (() => {
-                          const account = settings.bankAccounts.find(acc => acc.id === selectedAccountId);
-                          return formatCurrency(statistics.netBalance, account?.currency || "USD");
-                        })()
-                      : formatCurrency(statistics.netBalance)
-                    }
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <Wallet className={`h-8 w-8 ${statistics.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Net Balance ({currency})</p>
+                              <p className={`text-2xl font-bold ${statistics.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {formatCurrency(statistics.netBalance, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              // All accounts view - show stats grouped by currency
+              <div className="space-y-6">
+                {Object.entries(statistics.currencyGroups).map(([currency, stats]) => (
+                  <div key={currency} className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">{currency} Statistics</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <TrendingUp className="h-8 w-8 text-green-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Income ({currency})</p>
+                              <p className="text-2xl font-bold text-green-600">
+                                {formatCurrency(stats.income, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <TrendingDown className="h-8 w-8 text-red-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Expenses ({currency})</p>
+                              <p className="text-2xl font-bold text-red-600">
+                                {formatCurrency(stats.expenses, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <ArrowUpDown className="h-8 w-8 text-blue-600" />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Transfers ({currency})</p>
+                              <p className="text-2xl font-bold text-blue-600">
+                                {formatCurrency(stats.transfers, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center">
+                            <Wallet className={`h-8 w-8 ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                            <div className="ml-4">
+                              <p className="text-sm font-medium text-gray-600">Net Balance ({currency})</p>
+                              <p className={`text-2xl font-bold ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {formatCurrency(stats.income - stats.expenses, currency)}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Income - Expenses
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+                ))}
+                {Object.keys(statistics.currencyGroups).length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No transactions found for the selected period</p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-4">

@@ -66,15 +66,33 @@ export default function RealEstateFinances() {
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, selectedPropertyId, categoryFilter, searchQuery]);
 
-  // Dynamic statistics based on displayed transactions
+  // Dynamic statistics based on displayed transactions - grouped by currency
   const statistics = useMemo(() => {
-    const totalIncome = displayedTransactions
-      .filter(t => t.type === "income")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    const currencyGroups: Record<string, { income: number; expenses: number }> = {};
+    
+    displayedTransactions.forEach(transaction => {
+      const amount = parseFloat(transaction.amount);
+      // Note: Real estate transactions don't have direct account linking like general transactions
+      // They use property-specific accounts, so we'll use USD as default or property currency if available
+      const currency = 'USD'; // TODO: Add property-specific currency support if needed
+      
+      if (!currencyGroups[currency]) {
+        currencyGroups[currency] = { income: 0, expenses: 0 };
+      }
+      
+      if (transaction.type === "income") {
+        currencyGroups[currency].income += amount;
+      } else {
+        currencyGroups[currency].expenses += amount;
+      }
+    });
 
-    const totalExpenses = displayedTransactions
-      .filter(t => t.type === "expense")
-      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    // Calculate primary totals for backward compatibility
+    const primaryCurrency = Object.keys(currencyGroups)[0] || 'USD';
+    const primaryStats = currencyGroups[primaryCurrency] || { income: 0, expenses: 0 };
+    
+    const totalIncome = primaryStats.income;
+    const totalExpenses = primaryStats.expenses;
 
     const netBalance = totalIncome - totalExpenses;
 

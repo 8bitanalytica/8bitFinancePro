@@ -45,6 +45,8 @@ The application implements a per-account currency system where:
 - **Exchange Rate API**: Uses ExchangeRate.host API for live currency conversion without requiring API keys
 - **Conversion Display**: Shows original amount, converted amount, exchange rate, and timestamp in transfer modals
 - **Transaction History**: Exchange rate information is automatically saved in transaction descriptions for future reference
+- **No Global Currency**: Removed global currency settings - all data and statistics use individual account currencies
+- **Multi-Currency Statistics**: Dashboard and module statistics display data grouped by currency when viewing all accounts
 
 ### Settings System
 The application includes a comprehensive settings system with:

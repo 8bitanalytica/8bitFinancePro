@@ -18,7 +18,6 @@ interface BankAccount {
 }
 
 interface AppSettings {
-  currency: string; // Kept for backward compatibility
   generalCategories: string[];
   realEstateCategories: string[];
   deviceCategories: string[];
@@ -39,7 +38,6 @@ const currencies = [
 ];
 
 const defaultSettings: AppSettings = {
-  currency: "USD",
   generalCategories: [
     "Food & Dining",
     "Transportation",
@@ -140,10 +138,6 @@ export default function Settings() {
   const saveSettings = () => {
     localStorage.setItem("appSettings", JSON.stringify(settings));
     toast({ title: "Settings saved successfully" });
-  };
-
-  const handleCurrencyChange = (currency: string) => {
-    setSettings(prev => ({ ...prev, currency }));
   };
 
   const addCategory = () => {
@@ -309,38 +303,6 @@ npm run build && npm start # production`;
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Currency Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SettingsIcon className="h-5 w-5" />
-              Currency Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="currency">Default Currency</Label>
-                <Select value={settings.currency} onValueChange={handleCurrencyChange}>
-                  <SelectTrigger className="w-full mt-2">
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((currency) => (
-                      <SelectItem key={currency.code} value={currency.code}>
-                        {currency.symbol} - {currency.name} ({currency.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="text-sm text-gray-600">
-                Current currency: <span className="font-semibold">{getCurrencySymbol(settings.currency)} ({settings.currency})</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Category Management */}
         <Card>
           <CardHeader>
