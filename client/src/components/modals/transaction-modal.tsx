@@ -146,8 +146,8 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       ...(isRealEstate && { propertyId: 0 }),
       // Account fields (only for general finances)
       ...(!isRealEstate && {
-        fromAccountId: selectedAccountId || "",
-        toAccountId: selectedAccountId || "",
+        fromAccountId: "",
+        toAccountId: "",
       }),
       // Device fields defaults
       deviceName: "",
@@ -179,14 +179,13 @@ export default function TransactionModal({ transaction, onClose, type, propertie
     ? settings.bankAccounts.find(acc => acc.id === watchedToAccountId)
     : null;
 
-  // Update form values when switching to transfer and there's a selectedAccountId
+  // Clear transfer account fields when switching to transfer to force user selection
   useEffect(() => {
-    if (isTransfer && selectedAccountId && !isEditing) {
-      form.setValue("fromAccountId" as any, selectedAccountId);
-      // Clear toAccountId to force user to select destination
+    if (isTransfer && !isEditing) {
+      form.setValue("fromAccountId" as any, "");
       form.setValue("toAccountId" as any, "");
     }
-  }, [isTransfer, selectedAccountId, form, isEditing]);
+  }, [isTransfer, form, isEditing]);
 
   const watchedFromAccountId = form.watch("fromAccountId");
   const fromAccount = watchedFromAccountId 
@@ -321,7 +320,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               model: values.deviceModel || "",
               type: values.deviceType || "electronics",
               serialNumber: values.deviceSerialNumber || "",
-              purchaseDate: new Date(values.date),
+              purchaseDate: new Date(`${values.date}T${values.time}:00`),
               purchasePrice: values.amount,
               warrantyExpiry: values.deviceWarrantyExpiry ? new Date(values.deviceWarrantyExpiry) : undefined,
               alertDaysBefore: values.deviceAlertDaysBefore || 30,
@@ -397,112 +396,60 @@ export default function TransactionModal({ transaction, onClose, type, propertie
 
             {/* STEP 2: Account Selection based on transaction type */}
             {isTransfer ? (
-              /* Transfer Account Selection */
+              /* Transfer Account Selection - Always show both dropdowns */
               <div className="bg-blue-50 p-4 rounded-lg space-y-4">
                 <h3 className="text-sm font-semibold text-blue-800 mb-3">Transfer Accounts</h3>
                 
-                {selectedAccountId ? (
-                  /* When coming from specific account - show it as FROM */
-                  <>
-                    <div className="space-y-2">
-                      <FormLabel>From Account</FormLabel>
-                      <div className="flex items-center justify-between p-3 bg-white border border-blue-200 rounded-md">
-                        <div className="flex items-center space-x-3">
-                          <div 
-                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: selectedAccount?.color }}
-                          />
-                          <div>
-                            <span className="font-medium text-gray-900">{selectedAccount?.name}</span>
-                            <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
-                          </div>
-                        </div>
-                        <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                          Current Account
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <FormField
-                      control={form.control}
-                      name="toAccountId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>To Account</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                            <FormControl>
-                              <SelectTrigger className="h-12">
-                                <SelectValue placeholder="Select destination account" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {settings.bankAccounts
-                                .filter(account => account.id !== selectedAccountId)
-                                .map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  {account.name} ({account.currency})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </>
-                ) : (
-                  /* When in All Accounts view - show both dropdowns */
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="fromAccountId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>From Account</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                            <FormControl>
-                              <SelectTrigger className="h-12">
-                                <SelectValue placeholder="Select from account" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {settings.bankAccounts.map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  {account.name} ({account.currency})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="toAccountId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>To Account</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                            <FormControl>
-                              <SelectTrigger className="h-12">
-                                <SelectValue placeholder="Select to account" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {settings.bankAccounts.map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  {account.name} ({account.currency})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="fromAccountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>From Account</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                          <FormControl>
+                            <SelectTrigger className="h-12">
+                              <SelectValue placeholder="Select from account" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {settings.bankAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} ({account.currency})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="toAccountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>To Account</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                          <FormControl>
+                            <SelectTrigger className="h-12">
+                              <SelectValue placeholder="Select to account" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {settings.bankAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} ({account.currency})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             ) : (
               /* Income/Expense Account Selection */
@@ -785,7 +732,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Property</FormLabel>
-                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select property" />
