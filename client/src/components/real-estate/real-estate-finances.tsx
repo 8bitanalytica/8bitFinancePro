@@ -157,20 +157,29 @@ export default function RealEstateFinances() {
     }
   };
 
-  const handleDuplicateTransaction = (transaction: RealEstateTransaction) => {
-    const now = new Date();
-    const duplicatedTransaction = {
-      propertyId: transaction.propertyId,
-      projectId: transaction.projectId,
-      type: transaction.type,
-      amount: transaction.amount,
-      description: `${transaction.description} (Copy)`,
-      category: transaction.category,
-      date: now,
-    };
-    // Don't set an ID so it's treated as a new transaction
-    setEditingTransaction(duplicatedTransaction as RealEstateTransaction);
-    setShowTransactionModal(true);
+  const handleDuplicateTransaction = async (transaction: RealEstateTransaction) => {
+    try {
+      const now = new Date();
+      const duplicatedTransaction = {
+        propertyId: transaction.propertyId,
+        projectId: transaction.projectId,
+        type: transaction.type,
+        amount: transaction.amount,
+        description: `${transaction.description} (Copy)`,
+        category: transaction.category,
+        date: now,
+      };
+      
+      await realEstateTransactionsApi.create(duplicatedTransaction);
+      toast({ title: "Transaction duplicated successfully" });
+      refetchTransactions();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to duplicate transaction",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleTransactionModalClose = () => {
