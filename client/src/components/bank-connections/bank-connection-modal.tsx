@@ -78,7 +78,8 @@ export function BankConnectionModal({ open, onClose, accountId }: BankConnection
 
   const loadProviders = async () => {
     try {
-      const data = await apiRequest("/api/supported-providers");
+      const response = await fetch('/api/supported-providers');
+      const data = await response.json();
       setProviders(data);
     } catch (error) {
       toast({
@@ -123,10 +124,39 @@ export function BankConnectionModal({ open, onClose, accountId }: BankConnection
   const onSubmit = async (data: BankConnectionForm) => {
     setIsLoading(true);
     try {
-      await apiRequest("/api/bank-connections", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      // Check if we have a temp account to save first
+      const tempAccountString = localStorage.getItem('tempAccount');
+      if (tempAccountString && data.accountId.startsWith('temp_')) {
+        const tempAccount = JSON.parse(tempAccountString);
+        
+        // Create the actual account first
+        const savedSettings = localStorage.getItem("appSettings");
+        const currentSettings = savedSettings ? JSON.parse(savedSettings) : { bankAccounts: [] };
+        
+        const newAccount = {
+          ...tempAccount,
+          id: `account_${Date.now()}` // Give it a proper ID
+        };
+        
+        const updatedSettings = {
+          ...currentSettings,
+          bankAccounts: [...(currentSettings.bankAccounts || []), newAccount]
+        };
+        
+        localStorage.setItem("appSettings", JSON.stringify(updatedSettings));
+        
+        // Update the form data with the real account ID
+        data.accountId = newAccount.id;
+        
+        // Trigger account update events
+        window.dispatchEvent(new CustomEvent('accountsUpdated'));
+        window.dispatchEvent(new CustomEvent('settingsChanged'));
+        
+        // Clean up temp account
+        localStorage.removeItem('tempAccount');
+      }
+
+      await apiRequest("/api/bank-connections", "POST", data);
 
       queryClient.invalidateQueries({ queryKey: ["/api/bank-connections"] });
       toast({
@@ -156,10 +186,18 @@ export function BankConnectionModal({ open, onClose, accountId }: BankConnection
   React.useEffect(() => {
     if (open) {
       loadProviders();
+      // Check if we have a temp account and set the accountId
+      const tempAccountString = localStorage.getItem('tempAccount');
+      if (tempAccountString && accountId?.startsWith('temp_')) {
+        const tempAccount = JSON.parse(tempAccountString);
+        form.setValue('accountId', tempAccount.id);
+      } else if (accountId) {
+        form.setValue('accountId', accountId);
+      }
     } else {
       resetForm();
     }
-  }, [open]);
+  }, [open, accountId]);
 
   const currentProvider = providers.find(p => p.id === selectedProvider);
 

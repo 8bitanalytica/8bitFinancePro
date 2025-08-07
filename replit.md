@@ -59,7 +59,7 @@ The application includes a comprehensive settings system with:
 - **Settings Persistence**: All settings stored in localStorage for session persistence
 - **Import/Export**: Settings backup and restore functionality
 - **Technology Stack Documentation**: Complete VPS setup guide with installation commands, dependencies, and production configuration
-- **Bank Integration System**: Secure read-only API connections with Wise and Revolut for automatic transaction import
+- **Bank Integration System**: Secure read-only API connections with Wise and Revolut for automatic transaction import, integrated directly into account creation workflow
 
 ### Enhanced Device Management
 The device management system now includes:
@@ -79,6 +79,7 @@ The application includes a comprehensive bank connection system:
 - **Multi-Provider Support**: Factory pattern allows easy addition of new banking services
 - **Connection Testing**: Validate credentials and account access before saving
 - **Sync Management**: Manual and automatic synchronization with customizable settings
+- **Integrated Workflow**: Bank connections configured directly in account creation modal, not as separate administrative task
 
 ### Frontend Components
 - **Dashboard**: Main application interface with module switching

@@ -10,11 +10,9 @@ import {
   Download, 
   Trash2, 
   TestTube, 
-  Calendar, 
   CheckCircle, 
   XCircle, 
   Loader2,
-  Settings,
   RefreshCw
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";

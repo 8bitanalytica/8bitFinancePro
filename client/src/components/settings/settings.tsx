@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Save, Settings as SettingsIcon, Copy, Check, TrendingUp, TrendingDown, ArrowUpDown, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { BankConnectionsList } from "@/components/bank-connections";
+import { BankConnectionModal } from "@/components/bank-connections";
 
 interface BankAccount {
   id: string;
@@ -192,6 +192,8 @@ export default function Settings() {
   const [showBankModal, setShowBankModal] = useState(false);
   const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
   const [copiedCommands, setCopiedCommands] = useState(false);
+  const [showBankConnectionModal, setShowBankConnectionModal] = useState(false);
+  const [selectedAccountForConnection, setSelectedAccountForConnection] = useState<string | null>(null);
   const [bankForm, setBankForm] = useState({
     name: "",
     type: "checking" as BankAccount["type"],
@@ -736,6 +738,18 @@ npm run build && npm start # production`;
                       <p className="text-lg font-semibold">
                         {getCurrencySymbol(account.currency)}{account.balance.toFixed(2)}
                       </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedAccountForConnection(account.id);
+                          setShowBankConnectionModal(true);
+                        }}
+                        className="mt-2"
+                      >
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Connect Bank
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -744,18 +758,7 @@ npm run build && npm start # production`;
           </CardContent>
         </Card>
 
-        {/* Bank Connections */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5" />
-              Bank Connections
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BankConnectionsList />
-          </CardContent>
-        </Card>
+
 
         {/* Export/Import Settings */}
         <Card>
@@ -1084,6 +1087,53 @@ npm run build && npm start # production`;
                   ))}
                 </div>
               </div>
+
+              {/* Bank Connection Option */}
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Bank Connection</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Connect to your real bank account for automatic transaction import
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (!bankForm.name.trim()) {
+                        toast({
+                          title: "Account Name Required",
+                          description: "Please enter an account name first",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      // Save the current bank account first if it's new
+                      if (!editingBank) {
+                        const tempAccount = {
+                          id: `temp_${Date.now()}`,
+                          name: bankForm.name,
+                          type: bankForm.type,
+                          balance: parseFloat(bankForm.balance) || 0,
+                          color: bankForm.color,
+                          currency: bankForm.currency,
+                        };
+                        setSelectedAccountForConnection(tempAccount.id);
+                        // Store temp account for later use
+                        localStorage.setItem('tempAccount', JSON.stringify(tempAccount));
+                      } else {
+                        setSelectedAccountForConnection(editingBank.id);
+                      }
+                      setShowBankConnectionModal(true);
+                    }}
+                  >
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Connect Bank
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 mt-6">
@@ -1103,6 +1153,18 @@ npm run build && npm start # production`;
           </div>
         </div>
       )}
+
+      {/* Bank Connection Modal */}
+      <BankConnectionModal
+        open={showBankConnectionModal}
+        onClose={() => {
+          setShowBankConnectionModal(false);
+          setSelectedAccountForConnection(null);
+          // Clean up temp account
+          localStorage.removeItem('tempAccount');
+        }}
+        accountId={selectedAccountForConnection}
+      />
     </div>
   );
 }
