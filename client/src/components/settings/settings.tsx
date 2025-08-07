@@ -22,6 +22,11 @@ interface BankAccount {
 }
 
 interface AppSettings {
+  // App Customization
+  appName: string;
+  appLogo?: string;
+  menuPosition: "left" | "center" | "right";
+  // Categories
   generalCategories: string[];
   realEstateCategories: string[];
   deviceCategories: string[];
@@ -63,6 +68,10 @@ const availableIcons = [
 ];
 
 const defaultSettings: AppSettings = {
+  // App Customization
+  appName: "Financial Manager",
+  appLogo: undefined,
+  menuPosition: "center",
   // Legacy categories (for backward compatibility)
   generalCategories: [
     "Food & Dining",
@@ -613,6 +622,90 @@ npm run build && npm start # production`;
       </div>
 
       <div className="p-6 space-y-6">
+        {/* App Customization */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SettingsIcon className="h-5 w-5" />
+              App Customization
+            </CardTitle>
+            <p className="text-sm text-gray-600">Personalize the name, logo and navigation layout of your application</p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* App Name */}
+            <div className="space-y-2">
+              <Label htmlFor="appName">Application Name</Label>
+              <Input
+                id="appName"
+                value={settings.appName}
+                onChange={(e) => setSettings(prev => ({ ...prev, appName: e.target.value }))}
+                placeholder="Enter application name"
+                className="max-w-md"
+              />
+              <p className="text-xs text-gray-500">This name will appear in the navigation bar</p>
+            </div>
+
+            {/* App Logo */}
+            <div className="space-y-2">
+              <Label htmlFor="appLogo">Application Logo</Label>
+              <div className="flex items-center gap-4">
+                {settings.appLogo && (
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src={settings.appLogo} 
+                      alt="App Logo" 
+                      className="h-8 w-8 object-cover rounded"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSettings(prev => ({ ...prev, appLogo: undefined }))}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <Input
+                    id="appLogo"
+                    type="url"
+                    value={settings.appLogo || ""}
+                    onChange={(e) => setSettings(prev => ({ ...prev, appLogo: e.target.value || undefined }))}
+                    placeholder="Enter logo URL or upload image"
+                    className="max-w-md"
+                  />
+                  <Button variant="outline" size="sm" className="max-w-fit">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Image
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">Upload an image or enter a URL for your application logo</p>
+            </div>
+
+            {/* Menu Position */}
+            <div className="space-y-2">
+              <Label>Navigation Menu Position</Label>
+              <Select 
+                value={settings.menuPosition} 
+                onValueChange={(value: "left" | "center" | "right") => 
+                  setSettings(prev => ({ ...prev, menuPosition: value }))
+                }
+              >
+                <SelectTrigger className="max-w-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left Aligned</SelectItem>
+                  <SelectItem value="center">Center Aligned</SelectItem>
+                  <SelectItem value="right">Right Aligned</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">Choose where the navigation menu items are positioned in the top bar</p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Category Management */}
         <Card>
           <CardHeader>

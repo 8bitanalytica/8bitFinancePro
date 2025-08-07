@@ -10,6 +10,7 @@ import {
   X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppSettings } from "@/components/settings/settings";
 
 const navigation = [
   { name: "General", href: "/", icon: Home },
@@ -21,19 +22,36 @@ const navigation = [
 export default function TopNavigation() {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const settings = useAppSettings();
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex">
+          <div className={cn(
+            "flex",
+            settings.menuPosition === "center" && "flex-1 justify-center",
+            settings.menuPosition === "right" && "flex-1 justify-end"
+          )}>
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">Financial Manager</h1>
+              {settings.appLogo && (
+                <img 
+                  src={settings.appLogo} 
+                  alt="App Logo" 
+                  className="h-8 w-8 object-cover rounded mr-3"
+                />
+              )}
+              <h1 className="text-xl font-bold text-gray-900">{settings.appName}</h1>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
+            <div className={cn(
+              "hidden sm:flex sm:space-x-8",
+              settings.menuPosition === "left" && "sm:ml-8",
+              settings.menuPosition === "center" && "sm:ml-8",
+              settings.menuPosition === "right" && "sm:mr-8"
+            )}>
               {navigation.map((item) => {
                 const isActive = location === item.href;
                 return (
