@@ -158,6 +158,12 @@ export class MemStorage implements IStorage {
       ...insertTransaction,
       id,
       createdAt: new Date(),
+      fromAccountId: insertTransaction.fromAccountId ?? null,
+      toAccountId: insertTransaction.toAccountId ?? null,
+      propertyId: insertTransaction.propertyId ?? null,
+      realEstateSubcategory: insertTransaction.realEstateSubcategory ?? null,
+      deviceId: insertTransaction.deviceId ?? null,
+      receiptUrl: insertTransaction.receiptUrl ?? null,
     };
     this.generalTransactions.set(id, transaction);
     return transaction;
@@ -237,6 +243,11 @@ export class MemStorage implements IStorage {
       ...insertProject,
       id,
       createdAt: new Date(),
+      description: insertProject.description ?? null,
+      propertyId: insertProject.propertyId ?? null,
+      status: insertProject.status ?? "active",
+      budget: insertProject.budget ?? null,
+      endDate: insertProject.endDate ?? null,
     };
     this.propertyProjects.set(id, project);
     return project;
@@ -246,7 +257,11 @@ export class MemStorage implements IStorage {
     const existing = this.propertyProjects.get(id);
     if (!existing) return undefined;
     
-    const updated = { ...existing, ...updates };
+    const updated = { 
+      ...existing, 
+      ...updates,
+      endDate: updates.endDate ? (typeof updates.endDate === 'string' ? new Date(updates.endDate) : updates.endDate) : existing.endDate
+    };
     this.propertyProjects.set(id, updated);
     return updated;
   }
@@ -287,6 +302,8 @@ export class MemStorage implements IStorage {
       ...insertTransaction,
       id,
       createdAt: new Date(),
+      receiptUrl: insertTransaction.receiptUrl ?? null,
+      projectId: insertTransaction.projectId ?? null,
     };
     this.realEstateTransactions.set(id, transaction);
     return transaction;
@@ -320,6 +337,17 @@ export class MemStorage implements IStorage {
       ...insertDevice,
       id,
       createdAt: new Date(),
+      serialNumber: insertDevice.serialNumber ?? null,
+      purchaseDate: insertDevice.purchaseDate ?? null,
+      purchasePrice: insertDevice.purchasePrice ?? null,
+      warrantyExpiry: insertDevice.warrantyExpiry ?? null,
+      location: insertDevice.location ?? null,
+      assignedTo: insertDevice.assignedTo ?? null,
+      receiptImage: insertDevice.receiptImage ?? null,
+      deviceImage: insertDevice.deviceImage ?? null,
+      notes: insertDevice.notes ?? null,
+      alertDays: insertDevice.alertDays ?? null,
+      isActive: insertDevice.isActive ?? null,
     };
     this.devices.set(id, device);
     return device;
@@ -367,6 +395,7 @@ export class MemStorage implements IStorage {
       ...insertTransaction,
       id,
       createdAt: new Date(),
+      receiptUrl: insertTransaction.receiptUrl ?? null,
     };
     this.deviceTransactions.set(id, transaction);
     return transaction;
@@ -408,6 +437,11 @@ export class MemStorage implements IStorage {
       id,
       createdAt: new Date(),
       updatedAt: new Date(),
+      isActive: insertConnection.isActive ?? null,
+      refreshToken: insertConnection.refreshToken ?? null,
+      tokenExpiresAt: insertConnection.tokenExpiresAt ?? null,
+      lastSyncAt: insertConnection.lastSyncAt ?? null,
+      syncSettings: insertConnection.syncSettings ?? null,
     };
     this.bankConnections.set(id, connection);
     return connection;
@@ -448,6 +482,11 @@ export class MemStorage implements IStorage {
       ...insertImport,
       id,
       importedAt: new Date(),
+      status: insertImport.status ?? "pending",
+      connectionId: insertImport.connectionId ?? 0,
+      importedTransactionId: insertImport.importedTransactionId ?? 0,
+      rawData: insertImport.rawData ?? {},
+      errorMessage: insertImport.errorMessage ?? null,
     };
     this.transactionImports.set(id, importRecord);
     return importRecord;
@@ -494,6 +533,9 @@ export class MemStorage implements IStorage {
       lastProcessedDate: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      propertyId: insertTransaction.propertyId ?? null,
+      deviceId: insertTransaction.deviceId ?? null,
+      module: insertTransaction.module ?? "general",
     };
     this.recurringTransactions.set(id, transaction);
     return transaction;
@@ -522,7 +564,7 @@ export class MemStorage implements IStorage {
         case 'general':
           await this.createGeneralTransaction({
             type: recurring.type,
-            amount: parseFloat(recurring.amount),
+            amount: recurring.amount,
             description: `${recurring.description} (Recurring)`,
             category: recurring.category,
             date: new Date(),

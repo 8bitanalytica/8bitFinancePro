@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -65,14 +66,14 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
       type: device.type,
       brand: device.brand,
       model: device.model,
-      serialNumber: device.serialNumber || "",
+      serialNumber: device.serialNumber ?? "",
       purchaseDate: device.purchaseDate ? new Date(device.purchaseDate).toISOString().split('T')[0] : "",
       purchasePrice: device.purchasePrice || "",
       warrantyExpiry: device.warrantyExpiry ? new Date(device.warrantyExpiry).toISOString().split('T')[0] : "",
       status: device.status,
-      location: device.location || "",
-      assignedTo: device.assignedTo || "",
-      notes: device.notes || "",
+      location: device.location ?? "",
+      assignedTo: device.assignedTo ?? "",
+      notes: device.notes ?? "",
       receiptImage: device.receiptImage || "",
       deviceImage: device.deviceImage || "",
       alertDays: device.alertDays?.toString() || "30",
@@ -96,6 +97,21 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
       isActive: true,
     },
   });
+
+  // Watch for purchase date changes and automatically calculate warranty expiry
+  const purchaseDate = form.watch("purchaseDate");
+  
+  useEffect(() => {
+    if (purchaseDate && purchaseDate.trim() !== "") {
+      // Calculate warranty expiry: purchase date + 2 years
+      const purchaseDateObj = new Date(purchaseDate);
+      const warrantyExpiryDate = new Date(purchaseDateObj);
+      warrantyExpiryDate.setFullYear(warrantyExpiryDate.getFullYear() + 2);
+      
+      // Set the calculated warranty expiry date
+      form.setValue("warrantyExpiry", warrantyExpiryDate.toISOString().split('T')[0]);
+    }
+  }, [purchaseDate, form]);
 
   // Utility function to handle image file upload and convert to base64
   const handleImageUpload = (file: File, callback: (base64: string) => void) => {
@@ -309,9 +325,15 @@ export default function DeviceModal({ device, onClose }: DeviceModalProps) {
                 name="warrantyExpiry"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Warranty Expiry</FormLabel>
+                    <FormLabel>Warranty Expiry (Auto-calculated)</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        readOnly
+                        className="bg-gray-50 cursor-not-allowed"
+                        title="Automatically calculated as purchase date + 2 years"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
