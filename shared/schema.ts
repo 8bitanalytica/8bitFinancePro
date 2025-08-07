@@ -152,7 +152,7 @@ export const recurringTransactions = pgTable("recurring_transactions", {
   endDate: date("end_date"), // null means infinite
   nextDueDate: date("next_due_date").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
-  lastProcessedDate: date("last_processed_date"),
+  lastProcessedDate: timestamp("last_processed_date"),
   totalOccurrences: integer("total_occurrences"), // null means infinite
   currentOccurrence: integer("current_occurrence").default(0).notNull(),
   module: text("module").default("general").notNull(), // general, real-estate, devices
@@ -170,13 +170,13 @@ export const insertRecurringTransactionSchema = createInsertSchema(recurringTran
   lastProcessedDate: true,
 }).extend({
   startDate: z.string().or(z.date()).transform((val) => 
-    typeof val === 'string' ? new Date(val) : val
+    typeof val === 'string' ? val : val.toISOString().split('T')[0]
   ),
   endDate: z.string().or(z.date()).transform((val) => 
-    typeof val === 'string' ? new Date(val) : val
+    typeof val === 'string' ? val : val.toISOString().split('T')[0]
   ).optional(),
   nextDueDate: z.string().or(z.date()).transform((val) => 
-    typeof val === 'string' ? new Date(val) : val
+    typeof val === 'string' ? val : val.toISOString().split('T')[0]
   ),
 });
 

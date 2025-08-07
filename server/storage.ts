@@ -503,11 +503,10 @@ export class MemStorage implements IStorage {
 
       // Update recurring transaction
       await this.updateRecurringTransaction(id, {
-        nextDueDate: nextDate,
-        lastProcessedDate: new Date(),
+        nextDueDate: nextDate.toISOString().split('T')[0],
         currentOccurrence,
         isActive: !shouldDeactivate,
-      });
+      } as any);
 
       return true;
     } catch (error) {
@@ -722,6 +721,133 @@ export class DatabaseStorage implements IStorage {
   async updateTransactionImport(id: number, importRecord: Partial<InsertTransactionImport>): Promise<TransactionImport | undefined> {
     const [result] = await db.update(transactionImports).set(importRecord).where(eq(transactionImports.id, id)).returning();
     return result;
+  }
+
+  // Recurring Transactions
+  async getRecurringTransactions(): Promise<RecurringTransaction[]> {
+    return await db.select().from(recurringTransactions).orderBy(recurringTransactions.createdAt);
+  }
+
+  async getRecurringTransactionsByModule(module: string): Promise<RecurringTransaction[]> {
+    return await db.select().from(recurringTransactions).where(eq(recurringTransactions.module, module));
+  }
+
+  async getRecurringTransaction(id: number): Promise<RecurringTransaction | undefined> {
+    const [result] = await db.select().from(recurringTransactions).where(eq(recurringTransactions.id, id));
+    return result;
+  }
+
+  async getDueRecurringTransactions(): Promise<RecurringTransaction[]> {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+    return await db.select().from(recurringTransactions).where(
+      eq(recurringTransactions.isActive, true)
+    );
+  }
+
+  async createRecurringTransaction(transaction: InsertRecurringTransaction): Promise<RecurringTransaction> {
+    const [result] = await db.insert(recurringTransactions).values(transaction).returning();
+    return result;
+  }
+
+  async updateRecurringTransaction(id: number, transaction: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction | undefined> {
+    const [result] = await db.update(recurringTransactions).set(transaction).where(eq(recurringTransactions.id, id)).returning();
+    return result;
+  }
+
+  async deleteRecurringTransaction(id: number): Promise<boolean> {
+    const result = await db.delete(recurringTransactions).where(eq(recurringTransactions.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async processRecurringTransaction(id: number): Promise<boolean> {
+    try {
+      const recurring = await this.getRecurringTransaction(id);
+      if (!recurring || !recurring.isActive) return false;
+
+      // Create appropriate transaction based on module
+      switch (recurring.module) {
+        case 'general':
+          await this.createGeneralTransaction({
+            type: recurring.type,
+            amount: parseFloat(recurring.amount),
+            description: `${recurring.description} (Recurring)`,
+            category: recurring.category,
+            toAccountId: recurring.accountId || '',
+            date: new Date(),
+          });
+          break;
+        case 'real-estate':
+          if (recurring.propertyId) {
+            await this.createRealEstateTransaction({
+              propertyId: recurring.propertyId,
+              type: recurring.type,
+              amount: parseFloat(recurring.amount),
+              description: `${recurring.description} (Recurring)`,
+              category: recurring.category,
+              date: new Date(),
+            });
+          }
+          break;
+        case 'devices':
+          if (recurring.deviceId) {
+            await this.createDeviceTransaction({
+              deviceId: recurring.deviceId,
+              type: recurring.type,
+              amount: parseFloat(recurring.amount),
+              description: `${recurring.description} (Recurring)`,
+              category: recurring.category,
+              date: new Date(),
+            });
+          }
+          break;
+      }
+
+      // Calculate next due date
+      const nextDate = this.calculateNextDueDate(recurring);
+      const currentOccurrence = recurring.currentOccurrence + 1;
+
+      // Check if recurring should be deactivated
+      const shouldDeactivate = recurring.totalOccurrences && 
+        currentOccurrence >= recurring.totalOccurrences;
+
+      // Update recurring transaction
+      await this.updateRecurringTransaction(id, {
+        nextDueDate: nextDate.toISOString().split('T')[0],
+        currentOccurrence,
+        isActive: !shouldDeactivate,
+      } as any);
+
+      return true;
+    } catch (error) {
+      console.error('Error processing recurring transaction:', error);
+      return false;
+    }
+  }
+
+  private calculateNextDueDate(recurring: RecurringTransaction): Date {
+    const currentDate = new Date(recurring.nextDueDate);
+    const interval = recurring.intervalCount || 1;
+
+    switch (recurring.frequency) {
+      case 'daily':
+        currentDate.setDate(currentDate.getDate() + interval);
+        break;
+      case 'weekly':
+        currentDate.setDate(currentDate.getDate() + (interval * 7));
+        break;
+      case 'monthly':
+        currentDate.setMonth(currentDate.getMonth() + interval);
+        break;
+      case 'quarterly':
+        currentDate.setMonth(currentDate.getMonth() + (interval * 3));
+        break;
+      case 'yearly':
+        currentDate.setFullYear(currentDate.getFullYear() + interval);
+        break;
+    }
+
+    return currentDate;
   }
 }
 

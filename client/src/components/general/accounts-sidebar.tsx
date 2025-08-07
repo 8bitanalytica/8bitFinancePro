@@ -99,34 +99,12 @@ export default function AccountsSidebar({
               </Button>
             )}
             <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-1" />
-              Add
+              Add Transaction
             </Button>
           </div>
         </div>
 
-        {/* All Accounts View */}
-        <Card className={cn(
-          "cursor-pointer transition-all hover:shadow-md",
-          selectedAccountId === null ? "ring-2 ring-blue-500 bg-blue-50" : "hover:bg-white"
-        )}>
-          <CardContent 
-            className="p-4"
-            onClick={() => onAccountSelect(null)}
-          >
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-full">
-                <Eye className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-gray-900">All Accounts</h4>
-                <p className="text-sm text-gray-600">
-                  View all recent transactions
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Individual Accounts */}
         <div className="space-y-3">
