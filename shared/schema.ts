@@ -32,10 +32,24 @@ export const properties = pgTable("properties", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Property Projects Table
+export const propertyProjects = pgTable("property_projects", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").references(() => properties.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").notNull().default("active"), // active, completed, paused
+  budget: decimal("budget", { precision: 10, scale: 2 }),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Real Estate Transactions Table
 export const realEstateTransactions = pgTable("real_estate_transactions", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").notNull(),
+  projectId: integer("project_id").references(() => propertyProjects.id), // Optional project tracking
   type: text("type").notNull(), // "income" or "expense"
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   description: text("description").notNull(),
@@ -96,6 +110,18 @@ export const insertPropertySchema = createInsertSchema(properties).omit({
   createdAt: true,
 });
 
+export const insertPropertyProjectSchema = createInsertSchema(propertyProjects).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  startDate: z.string().or(z.date()).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  endDate: z.string().or(z.date()).optional().nullable().transform((val) => 
+    val && typeof val === 'string' ? new Date(val) : val
+  ),
+});
+
 export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTransactions).omit({
   id: true,
   createdAt: true,
@@ -104,6 +130,7 @@ export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTr
     typeof val === 'string' ? new Date(val) : val
   ),
   receiptUrl: z.string().optional(),
+  projectId: z.number().optional(),
 });
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
@@ -127,6 +154,9 @@ export type InsertGeneralTransaction = z.infer<typeof insertGeneralTransactionSc
 
 export type Property = typeof properties.$inferSelect;
 export type InsertProperty = z.infer<typeof insertPropertySchema>;
+
+export type PropertyProject = typeof propertyProjects.$inferSelect;
+export type InsertPropertyProject = z.infer<typeof insertPropertyProjectSchema>;
 
 export type RealEstateTransaction = typeof realEstateTransactions.$inferSelect;
 export type InsertRealEstateTransaction = z.infer<typeof insertRealEstateTransactionSchema>;

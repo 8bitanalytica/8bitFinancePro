@@ -1,28 +1,36 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Home, Plus, Eye } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Home, Plus, Eye, FolderOpen, Calendar, Target } from "lucide-react";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
-import type { Property, RealEstateTransaction } from "@shared/schema";
+import { format } from "date-fns";
+import type { Property, RealEstateTransaction, PropertyProject } from "@shared/schema";
 
 interface PropertiesSidebarProps {
   selectedPropertyId: number | null;
   onPropertySelect: (propertyId: number | null) => void;
   properties: Property[];
+  projects: PropertyProject[];
   transactions: RealEstateTransaction[];
   onAddProperty: () => void;
   onAddTransaction: () => void;
+  onAddProject: () => void;
+  onEditProject?: (project: PropertyProject) => void;
 }
 
 export default function PropertiesSidebar({ 
   selectedPropertyId, 
   onPropertySelect, 
   properties,
+  projects,
   transactions,
   onAddProperty,
-  onAddTransaction 
+  onAddTransaction,
+  onAddProject,
+  onEditProject
 }: PropertiesSidebarProps) {
   const settings = useAppSettings();
   const [, setLocation] = useLocation();
@@ -47,6 +55,19 @@ export default function PropertiesSidebar({
     ).length;
   };
 
+  const getPropertyProjects = (propertyId: number) => {
+    return projects.filter(project => project.propertyId === propertyId);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'paused': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="w-80 bg-gray-50 border-r border-gray-200 h-screen overflow-y-auto">
       <div className="p-4 space-y-4">
@@ -56,6 +77,10 @@ export default function PropertiesSidebar({
             <Button onClick={onAddProperty} size="sm" variant="outline">
               <Plus className="h-4 w-4 mr-1" />
               Property
+            </Button>
+            <Button onClick={onAddProject} size="sm" variant="outline" className="text-purple-600 border-purple-200 hover:bg-purple-50">
+              <FolderOpen className="h-4 w-4 mr-1" />
+              Project
             </Button>
             <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-1" />
@@ -122,6 +147,44 @@ export default function PropertiesSidebar({
                       <p className="text-xs text-gray-500 truncate mt-1">
                         {property.address}
                       </p>
+                      
+                      {/* Projects Section */}
+                      {(() => {
+                        const propertyProjects = getPropertyProjects(property.id);
+                        return propertyProjects.length > 0 ? (
+                          <div className="mt-2 mb-3 space-y-1">
+                            {propertyProjects.slice(0, 2).map((project) => (
+                              <div 
+                                key={project.id} 
+                                className="flex items-center justify-between p-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditProject?.(project);
+                                }}
+                              >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <FolderOpen className="h-3 w-3 text-purple-500 flex-shrink-0" />
+                                  <span className="text-xs font-medium text-gray-700 truncate">
+                                    {project.name}
+                                  </span>
+                                </div>
+                                <Badge 
+                                  variant="secondary" 
+                                  className={cn("text-xs", getStatusColor(project.status))}
+                                >
+                                  {project.status}
+                                </Badge>
+                              </div>
+                            ))}
+                            {propertyProjects.length > 2 && (
+                              <div className="text-xs text-gray-500 pl-5">
+                                +{propertyProjects.length - 2} more projects
+                              </div>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
+
                       <div className="mt-2">
                         <p className="text-lg font-bold text-green-600">
                           {formatCurrency(balance)}

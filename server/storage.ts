@@ -3,6 +3,8 @@ import {
   InsertGeneralTransaction,
   Property,
   InsertProperty,
+  PropertyProject,
+  InsertPropertyProject,
   RealEstateTransaction,
   InsertRealEstateTransaction,
   Device,
@@ -15,6 +17,7 @@ import {
   InsertTransactionImport,
   generalTransactions,
   properties,
+  propertyProjects,
   realEstateTransactions,
   devices,
   deviceTransactions,
@@ -41,6 +44,13 @@ export interface IStorage {
   createProperty(property: InsertProperty): Promise<Property>;
   updateProperty(id: number, property: Partial<InsertProperty>): Promise<Property | undefined>;
   deleteProperty(id: number): Promise<boolean>;
+  
+  // Property Projects
+  getPropertyProjects(propertyId?: number): Promise<PropertyProject[]>;
+  getPropertyProject(id: number): Promise<PropertyProject | undefined>;
+  createPropertyProject(project: InsertPropertyProject): Promise<PropertyProject>;
+  updatePropertyProject(id: number, project: Partial<InsertPropertyProject>): Promise<PropertyProject | undefined>;
+  deletePropertyProject(id: number): Promise<boolean>;
   
   // Real Estate Transactions
   getRealEstateTransactions(): Promise<RealEstateTransaction[]>;
@@ -93,6 +103,7 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private generalTransactions: Map<number, GeneralTransaction>;
   private properties: Map<number, Property>;
+  private propertyProjects: Map<number, PropertyProject>;
   private realEstateTransactions: Map<number, RealEstateTransaction>;
   private devices: Map<number, Device>;
   private deviceTransactions: Map<number, DeviceTransaction>;
@@ -101,6 +112,7 @@ export class MemStorage implements IStorage {
   private recurringTransactions: Map<number, RecurringTransaction>;
   private currentGeneralTransactionId: number;
   private currentPropertyId: number;
+  private currentPropertyProjectId: number;
   private currentRealEstateTransactionId: number;
   private currentDeviceId: number;
   private currentDeviceTransactionId: number;
@@ -111,6 +123,7 @@ export class MemStorage implements IStorage {
   constructor() {
     this.generalTransactions = new Map();
     this.properties = new Map();
+    this.propertyProjects = new Map();
     this.realEstateTransactions = new Map();
     this.devices = new Map();
     this.deviceTransactions = new Map();
@@ -119,6 +132,7 @@ export class MemStorage implements IStorage {
     this.recurringTransactions = new Map();
     this.currentGeneralTransactionId = 1;
     this.currentPropertyId = 1;
+    this.currentPropertyProjectId = 1;
     this.currentRealEstateTransactionId = 1;
     this.currentDeviceId = 1;
     this.currentDeviceTransactionId = 1;
@@ -198,7 +212,56 @@ export class MemStorage implements IStorage {
     
     transactions.forEach(t => this.realEstateTransactions.delete(t.id));
     
+    // Also delete associated property projects
+    const projects = Array.from(this.propertyProjects.values())
+      .filter(p => p.propertyId === id);
+    
+    projects.forEach(p => this.propertyProjects.delete(p.id));
+    
     return this.properties.delete(id);
+  }
+
+  // Property Projects
+  async getPropertyProjects(propertyId?: number): Promise<PropertyProject[]> {
+    const projects = Array.from(this.propertyProjects.values());
+    return propertyId ? projects.filter(p => p.propertyId === propertyId) : projects;
+  }
+
+  async getPropertyProject(id: number): Promise<PropertyProject | undefined> {
+    return this.propertyProjects.get(id);
+  }
+
+  async createPropertyProject(insertProject: InsertPropertyProject): Promise<PropertyProject> {
+    const id = this.currentPropertyProjectId++;
+    const project: PropertyProject = {
+      ...insertProject,
+      id,
+      createdAt: new Date(),
+    };
+    this.propertyProjects.set(id, project);
+    return project;
+  }
+
+  async updatePropertyProject(id: number, updates: Partial<InsertPropertyProject>): Promise<PropertyProject | undefined> {
+    const existing = this.propertyProjects.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.propertyProjects.set(id, updated);
+    return updated;
+  }
+
+  async deletePropertyProject(id: number): Promise<boolean> {
+    // Also delete associated real estate transactions with this project
+    const transactions = Array.from(this.realEstateTransactions.values())
+      .filter(t => t.projectId === id);
+    
+    transactions.forEach(t => {
+      const updated = { ...t, projectId: null };
+      this.realEstateTransactions.set(t.id, updated);
+    });
+    
+    return this.propertyProjects.delete(id);
   }
 
   // Real Estate Transactions
@@ -589,6 +652,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProperty(id: number): Promise<boolean> {
     const result = await db.delete(properties).where(eq(properties.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Property Projects
+  async getPropertyProjects(propertyId?: number): Promise<PropertyProject[]> {
+    if (propertyId) {
+      return await db.select().from(propertyProjects).where(eq(propertyProjects.propertyId, propertyId));
+    }
+    return await db.select().from(propertyProjects).orderBy(propertyProjects.createdAt);
+  }
+
+  async getPropertyProject(id: number): Promise<PropertyProject | undefined> {
+    const [result] = await db.select().from(propertyProjects).where(eq(propertyProjects.id, id));
+    return result;
+  }
+
+  async createPropertyProject(project: InsertPropertyProject): Promise<PropertyProject> {
+    const [result] = await db.insert(propertyProjects).values(project).returning();
+    return result;
+  }
+
+  async updatePropertyProject(id: number, project: Partial<InsertPropertyProject>): Promise<PropertyProject | undefined> {
+    const [result] = await db.update(propertyProjects).set(project).where(eq(propertyProjects.id, id)).returning();
+    return result;
+  }
+
+  async deletePropertyProject(id: number): Promise<boolean> {
+    const result = await db.delete(propertyProjects).where(eq(propertyProjects.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 

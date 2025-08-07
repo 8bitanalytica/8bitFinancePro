@@ -4,6 +4,8 @@ import type {
   InsertGeneralTransaction,
   Property,
   InsertProperty,
+  PropertyProject,
+  InsertPropertyProject,
   RealEstateTransaction,
   InsertRealEstateTransaction,
   Device,
@@ -63,6 +65,36 @@ export const propertiesApi = {
 
   delete: async (id: number): Promise<void> => {
     await apiRequest("DELETE", `/api/properties/${id}`);
+  },
+};
+
+// Property Projects API
+export const propertyProjectsApi = {
+  getAll: async (propertyId?: number): Promise<PropertyProject[]> => {
+    const url = propertyId 
+      ? `/api/property-projects?propertyId=${propertyId}`
+      : "/api/property-projects";
+    const response = await apiRequest("GET", url);
+    return response.json();
+  },
+
+  get: async (id: number): Promise<PropertyProject> => {
+    const response = await apiRequest("GET", `/api/property-projects/${id}`);
+    return response.json();
+  },
+
+  create: async (data: InsertPropertyProject): Promise<PropertyProject> => {
+    const response = await apiRequest("POST", "/api/property-projects", data);
+    return response.json();
+  },
+
+  update: async (id: number, data: Partial<InsertPropertyProject>): Promise<PropertyProject> => {
+    const response = await apiRequest("PUT", `/api/property-projects/${id}`, data);
+    return response.json();
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await apiRequest("DELETE", `/api/property-projects/${id}`);
   },
 };
 

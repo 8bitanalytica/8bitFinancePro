@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { 
   insertGeneralTransactionSchema,
   insertPropertySchema,
+  insertPropertyProjectSchema,
   insertRealEstateTransactionSchema,
   insertDeviceSchema,
   insertDeviceTransactionSchema,
@@ -145,6 +146,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete property" });
+    }
+  });
+
+  // Property Projects Routes
+  app.get("/api/property-projects", async (req, res) => {
+    try {
+      const propertyId = req.query.propertyId ? parseInt(req.query.propertyId as string) : undefined;
+      const projects = await storage.getPropertyProjects(propertyId);
+      res.json(projects);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  app.get("/api/property-projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.getPropertyProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  app.post("/api/property-projects", async (req, res) => {
+    try {
+      const validatedData = insertPropertyProjectSchema.parse(req.body);
+      const project = await storage.createPropertyProject(validatedData);
+      res.status(201).json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
+  app.put("/api/property-projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertPropertyProjectSchema.partial().parse(req.body);
+      const project = await storage.updatePropertyProject(id, validatedData);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  app.delete("/api/property-projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deletePropertyProject(id);
+      if (!success) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete project" });
     }
   });
 

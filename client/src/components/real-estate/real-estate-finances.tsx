@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { realEstateTransactionsApi, propertiesApi } from "@/lib/api";
+import { realEstateTransactionsApi, propertiesApi, propertyProjectsApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,18 +11,21 @@ import { TrendingUp, TrendingDown, Home, Edit, Trash2, Search, Eye, ChevronDown,
 import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
 import PropertyModal from "@/components/modals/property-modal";
+import PropertyProjectModal from "@/components/modals/property-project-modal";
 import PropertiesSidebar from "@/components/real-estate/properties-sidebar";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import type { RealEstateTransaction, Property } from "@shared/schema";
+import type { RealEstateTransaction, Property, PropertyProject } from "@shared/schema";
 
 export default function RealEstateFinances() {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<RealEstateTransaction | undefined>();
   const [editingProperty, setEditingProperty] = useState<Property | undefined>();
+  const [editingProject, setEditingProject] = useState<PropertyProject | undefined>();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
@@ -38,6 +41,11 @@ export default function RealEstateFinances() {
   const { data: properties = [], isLoading: propertiesLoading, refetch: refetchProperties } = useQuery({
     queryKey: ["/api/properties"],
     queryFn: propertiesApi.getAll,
+  });
+
+  const { data: projects = [], isLoading: projectsLoading, refetch: refetchProjects } = useQuery({
+    queryKey: ["/api/property-projects"],
+    queryFn: propertyProjectsApi.getAll,
   });
 
   // Dynamic calculations based on displayed transactions
@@ -112,6 +120,16 @@ export default function RealEstateFinances() {
     setShowTransactionModal(true);
   };
 
+  const handleAddProject = () => {
+    setEditingProject(undefined);
+    setShowProjectModal(true);
+  };
+
+  const handleEditProject = (project: PropertyProject) => {
+    setEditingProject(project);
+    setShowProjectModal(true);
+  };
+
   const handleEditTransaction = (transaction: RealEstateTransaction) => {
     setEditingTransaction(transaction);
     setShowTransactionModal(true);
@@ -156,6 +174,12 @@ export default function RealEstateFinances() {
     refetchProperties();
   };
 
+  const handleProjectModalClose = () => {
+    setShowProjectModal(false);
+    setEditingProject(undefined);
+    refetchProjects();
+  };
+
   const handlePropertySelect = (propertyId: number | null) => {
     setSelectedPropertyId(propertyId);
     setVisibleTransactions(30);
@@ -185,9 +209,12 @@ export default function RealEstateFinances() {
         selectedPropertyId={selectedPropertyId}
         onPropertySelect={handlePropertySelect}
         properties={properties}
+        projects={projects}
         transactions={transactions}
         onAddProperty={handleAddProperty}
         onAddTransaction={handleAddTransaction}
+        onAddProject={handleAddProject}
+        onEditProject={handleEditProject}
       />
 
       {/* Main Content */}
@@ -428,6 +455,16 @@ export default function RealEstateFinances() {
         <PropertyModal
           onClose={handlePropertyModalClose}
           property={editingProperty}
+        />
+      )}
+
+      {showProjectModal && (
+        <PropertyProjectModal
+          isOpen={showProjectModal}
+          onClose={handleProjectModalClose}
+          project={editingProject}
+          properties={properties}
+          propertyId={selectedPropertyId || undefined}
         />
       )}
     </div>
