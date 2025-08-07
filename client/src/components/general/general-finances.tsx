@@ -155,14 +155,17 @@ export default function GeneralFinances() {
         description: `${transaction.description} (Copy)`,
         category: transaction.category,
         date: now,
-        toAccountId: transaction.toAccountId,
-        fromAccountId: transaction.fromAccountId,
+        toAccountId: transaction.toAccountId || null,
+        fromAccountId: transaction.fromAccountId || null,
+        receiptUrl: null,
       };
       
+      console.log('Duplicating transaction:', duplicatedTransaction);
       await generalTransactionsApi.create(duplicatedTransaction);
       toast({ title: "Transaction duplicated successfully" });
       refetchTransactions();
     } catch (error) {
+      console.error('Duplication error:', error);
       toast({
         title: "Error",
         description: "Failed to duplicate transaction",

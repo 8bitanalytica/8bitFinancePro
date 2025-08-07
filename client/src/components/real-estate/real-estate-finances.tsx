@@ -162,18 +162,21 @@ export default function RealEstateFinances() {
       const now = new Date();
       const duplicatedTransaction = {
         propertyId: transaction.propertyId,
-        projectId: transaction.projectId,
+        projectId: transaction.projectId || null,
         type: transaction.type,
         amount: transaction.amount,
         description: `${transaction.description} (Copy)`,
         category: transaction.category,
         date: now,
+        receiptUrl: null,
       };
       
+      console.log('Duplicating transaction:', duplicatedTransaction);
       await realEstateTransactionsApi.create(duplicatedTransaction);
       toast({ title: "Transaction duplicated successfully" });
       refetchTransactions();
     } catch (error) {
+      console.error('Duplication error:', error);
       toast({
         title: "Error",
         description: "Failed to duplicate transaction",
