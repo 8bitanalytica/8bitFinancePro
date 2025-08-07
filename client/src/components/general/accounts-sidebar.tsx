@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Plus, Eye, BarChart3, Wallet, TrendingUp, Coins } from "lucide-react";
+import { CreditCard, Plus, Eye, BarChart3, Wallet, TrendingUp, Coins, DollarSign, PiggyBank, Landmark, Bitcoin, Users, Smartphone, Building } from "lucide-react";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,37 @@ export default function AccountsSidebar({
 
   // Get fresh settings on every render and when refreshKey changes
   const settings = useAppSettings();
+
+  // Icon mapping for rendering custom account icons
+  const getAccountIcon = (account: any) => {
+    if (account.iconType === "custom" && account.customIcon) {
+      return (
+        <img 
+          src={account.customIcon} 
+          alt="Account icon" 
+          className="h-4 w-4 object-cover rounded"
+        />
+      );
+    }
+    
+    // Default to lucide icons
+    const iconName = account.iconName || "CreditCard";
+    const iconMap: Record<string, any> = {
+      CreditCard,
+      Wallet,
+      Building,
+      DollarSign,
+      PiggyBank,
+      Landmark,
+      Bitcoin,
+      TrendingUp,
+      Users,
+      Smartphone
+    };
+    
+    const IconComponent = iconMap[iconName] || CreditCard;
+    return <IconComponent className="h-4 w-4 text-white" />;
+  };
 
   // Listen for account updates from settings
   useEffect(() => {
@@ -130,7 +161,7 @@ export default function AccountsSidebar({
                       className="p-2 rounded-full border-2 border-white shadow-sm"
                       style={{ backgroundColor: account.color }}
                     >
-                      <CreditCard className="h-4 w-4 text-white" />
+                      {getAccountIcon(account)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">

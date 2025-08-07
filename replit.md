@@ -10,6 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Custom Account Icons (2025-08-07)**: Added ability to select predefined icons or upload custom PNG/JPEG images for bank accounts during creation
 - **Dashboard Removal (2025-08-07)**: Removed standalone dashboard page as requested, keeping only the integrated dashboard functionality within general finances module
 - **Account Organization (2025-08-07)**: Organized accounts into three sections: Cash Accounts, Credits, and Investments in the sidebar
 - **Recurring Transactions Fix (2025-08-07)**: Removed totalOccurrences field logic and fixed display to show proper end dates and progress
@@ -62,7 +63,7 @@ The application includes a comprehensive settings system with:
 - **Per-Account Currency**: Each bank account has its own currency setting, allowing multi-currency financial management
 - **Currency Selection**: Support for 10 major currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, CNY, INR, BRL)
 - **Expense Categories**: Customizable categories for each module (general, real estate, devices)
-- **Bank Account Management**: Multiple bank accounts with visual tracking, types, balances, color coding, and individual currencies
+- **Bank Account Management**: Multiple bank accounts with visual tracking, types, balances, color coding, individual currencies, and customizable icons (predefined or custom uploaded images)
 - **Settings Persistence**: All settings stored in localStorage for session persistence
 - **Import/Export**: Settings backup and restore functionality
 - **Technology Stack Documentation**: Complete VPS setup guide with installation commands, dependencies, and production configuration

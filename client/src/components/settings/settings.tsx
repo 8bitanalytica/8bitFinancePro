@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Save, Settings as SettingsIcon, Copy, Check, TrendingUp, TrendingDown, ArrowUpDown, Link2 } from "lucide-react";
+import { Plus, X, Save, Settings as SettingsIcon, Copy, Check, TrendingUp, TrendingDown, ArrowUpDown, Link2, CreditCard, Wallet, Building, Smartphone, DollarSign, PiggyBank, Landmark, Bitcoin, Users, Upload, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BankConnectionModal } from "@/components/bank-connections";
 
@@ -16,6 +16,9 @@ interface BankAccount {
   balance: number;
   color: string;
   currency: string;
+  iconType?: "lucide" | "custom"; // Tipo di icona
+  iconName?: string; // Nome dell'icona Lucide
+  customIcon?: string; // URL dell'immagine caricata dall'utente
 }
 
 interface AppSettings {
@@ -43,6 +46,20 @@ const currencies = [
   { code: "CNY", name: "Chinese Yuan", symbol: "¥" },
   { code: "INR", name: "Indian Rupee", symbol: "₹" },
   { code: "BRL", name: "Brazilian Real", symbol: "R$" },
+];
+
+// Icone disponibili per gli account
+const availableIcons = [
+  { name: "CreditCard", icon: CreditCard, label: "Carta di Credito" },
+  { name: "Wallet", icon: Wallet, label: "Portafoglio" },
+  { name: "Building", icon: Building, label: "Banca" },
+  { name: "DollarSign", icon: DollarSign, label: "Dollaro" },
+  { name: "PiggyBank", icon: PiggyBank, label: "Salvadanaio" },
+  { name: "Landmark", icon: Landmark, label: "Istituto" },
+  { name: "Bitcoin", icon: Bitcoin, label: "Crypto" },
+  { name: "TrendingUp", icon: TrendingUp, label: "Investimenti" },
+  { name: "Users", icon: Users, label: "Condiviso" },
+  { name: "Smartphone", icon: Smartphone, label: "Mobile Banking" }
 ];
 
 const defaultSettings: AppSettings = {
@@ -203,6 +220,9 @@ export default function Settings() {
     balance: "",
     color: accountColors[0],
     currency: "USD",
+    iconType: "lucide" as "lucide" | "custom",
+    iconName: "CreditCard",
+    customIcon: "",
   });
   const { toast } = useToast();
 
@@ -438,6 +458,9 @@ export default function Settings() {
         balance: bank.balance.toString(),
         color: bank.color,
         currency: bank.currency,
+        iconType: bank.iconType || "lucide",
+        iconName: bank.iconName || "CreditCard",
+        customIcon: bank.customIcon || "",
       });
     } else {
       setEditingBank(null);
@@ -447,6 +470,9 @@ export default function Settings() {
         balance: "",
         color: accountColors[0],
         currency: "USD",
+        iconType: "lucide",
+        iconName: "CreditCard",
+        customIcon: "",
       });
     }
     setShowBankModal(true);
@@ -470,6 +496,9 @@ export default function Settings() {
       balance,
       color: bankForm.color,
       currency: bankForm.currency,
+      iconType: bankForm.iconType,
+      iconName: bankForm.iconName,
+      customIcon: bankForm.customIcon,
     };
 
     if (editingBank) {
@@ -1136,6 +1165,108 @@ npm run build && npm start # production`;
                       onClick={() => setBankForm({ ...bankForm, color })}
                     />
                   ))}
+                </div>
+              </div>
+
+              {/* Icon Selection */}
+              <div>
+                <Label>Icon</Label>
+                <div className="space-y-3 mt-2">
+                  {/* Icon Type Selection */}
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={bankForm.iconType === "lucide" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setBankForm({ ...bankForm, iconType: "lucide", customIcon: "" })}
+                    >
+                      Predefined Icons
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={bankForm.iconType === "custom" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setBankForm({ ...bankForm, iconType: "custom", iconName: "" })}
+                    >
+                      Custom Image
+                    </Button>
+                  </div>
+
+                  {bankForm.iconType === "lucide" && (
+                    <div className="grid grid-cols-5 gap-2">
+                      {availableIcons.map((iconItem) => {
+                        const IconComponent = iconItem.icon;
+                        return (
+                          <button
+                            key={iconItem.name}
+                            type="button"
+                            className={`p-3 rounded-lg border-2 flex items-center justify-center hover:bg-gray-50 ${
+                              bankForm.iconName === iconItem.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                            }`}
+                            onClick={() => setBankForm({ ...bankForm, iconName: iconItem.name })}
+                            title={iconItem.label}
+                          >
+                            <IconComponent className="h-5 w-5" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {bankForm.iconType === "custom" && (
+                    <div className="space-y-3">
+                      {bankForm.customIcon && (
+                        <div className="flex items-center gap-3 p-3 border rounded-lg">
+                          <img 
+                            src={bankForm.customIcon} 
+                            alt="Custom icon" 
+                            className="w-8 h-8 object-cover rounded"
+                          />
+                          <span className="text-sm text-gray-600">Custom icon uploaded</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setBankForm({ ...bankForm, customIcon: "" })}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.accept = 'image/png,image/jpeg,image/jpg';
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              if (file.size > 1024 * 1024) { // 1MB limit
+                                toast({
+                                  title: "File too large",
+                                  description: "Please choose an image smaller than 1MB",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = (e) => {
+                                setBankForm({ ...bankForm, customIcon: e.target?.result as string });
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          };
+                          input.click();
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload PNG/JPEG (max 1MB)
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
