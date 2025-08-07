@@ -29,6 +29,14 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const isEditing = !!transaction;
   const isRealEstate = type === "real-estate";
 
+  const getCurrencySymbol = (code: string) => {
+    const currencies = {
+      USD: "$", EUR: "€", GBP: "£", JPY: "¥", CAD: "C$", AUD: "A$", 
+      CHF: "CHF", CNY: "¥", INR: "₹", BRL: "R$"
+    };
+    return currencies[code as keyof typeof currencies] || code;
+  };
+
   const categories = isRealEstate ? settings.realEstateCategories : settings.generalCategories;
 
   const baseSchema = isRealEstate ? insertRealEstateTransactionSchema : insertGeneralTransactionSchema;
@@ -157,8 +165,13 @@ export default function TransactionModal({ transaction, onClose, type, propertie
 
   const watchedCategory = form.watch("category");
   const watchedType = form.watch("type");
+  const watchedToAccountId = form.watch("toAccountId");
   const isDeviceCategory = watchedCategory === "Device";
   const isTransfer = watchedType === "transfer";
+
+  const selectedAccount = watchedToAccountId 
+    ? settings.bankAccounts.find(acc => acc.id === watchedToAccountId)
+    : null;
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -273,7 +286,9 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount ({currency.symbol})</FormLabel>
+                  <FormLabel>
+                    Amount ({selectedAccount ? getCurrencySymbol(selectedAccount.currency) : currency.symbol})
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -341,7 +356,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>From Account</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select from account" />
@@ -365,7 +380,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>To Account</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select to account" />
@@ -392,7 +407,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Account</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <Select onValueChange={field.onChange} value={field.value as string || undefined}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select account" />

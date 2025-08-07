@@ -131,7 +131,7 @@ export default function AccountsSidebar({
                           className="text-lg font-bold truncate" 
                           style={{ color: account.color }}
                         >
-                          {formatCurrency(balance)}
+                          {formatCurrency(balance, account.currency)}
                         </p>
                         <p className="text-xs text-gray-500">
                           {transactionCount} transaction{transactionCount !== 1 ? 's' : ''}

@@ -14,10 +14,11 @@ interface BankAccount {
   type: "checking" | "savings" | "credit" | "investment";
   balance: number;
   color: string;
+  currency: string;
 }
 
 interface AppSettings {
-  currency: string;
+  currency: string; // Kept for backward compatibility
   generalCategories: string[];
   realEstateCategories: string[];
   deviceCategories: string[];
@@ -82,6 +83,7 @@ const defaultSettings: AppSettings = {
       type: "checking",
       balance: 0,
       color: "#3b82f6",
+      currency: "USD",
     },
     {
       id: "2",
@@ -89,6 +91,7 @@ const defaultSettings: AppSettings = {
       type: "savings",
       balance: 0,
       color: "#10b981",
+      currency: "USD",
     },
   ],
 };
@@ -117,6 +120,7 @@ export default function Settings() {
     type: "checking" as BankAccount["type"],
     balance: "",
     color: accountColors[0],
+    currency: "USD",
   });
   const { toast } = useToast();
 
@@ -181,6 +185,7 @@ export default function Settings() {
         type: bank.type,
         balance: bank.balance.toString(),
         color: bank.color,
+        currency: bank.currency,
       });
     } else {
       setEditingBank(null);
@@ -189,6 +194,7 @@ export default function Settings() {
         type: "checking",
         balance: "",
         color: accountColors[0],
+        currency: "USD",
       });
     }
     setShowBankModal(true);
@@ -211,6 +217,7 @@ export default function Settings() {
       type: bankForm.type,
       balance,
       color: bankForm.color,
+      currency: bankForm.currency,
     };
 
     if (editingBank) {
@@ -459,7 +466,7 @@ npm run build && npm start # production`;
                       </div>
                       <p className="text-sm text-gray-600 capitalize">{account.type}</p>
                       <p className="text-lg font-semibold">
-                        {getCurrencySymbol(settings.currency)}{account.balance.toFixed(2)}
+                        {getCurrencySymbol(account.currency)}{account.balance.toFixed(2)}
                       </p>
                     </div>
                   ))}
@@ -756,7 +763,23 @@ npm run build && npm start # production`;
               </div>
 
               <div>
-                <Label htmlFor="bank-balance">Current Balance ({getCurrencySymbol(settings.currency)})</Label>
+                <Label htmlFor="bank-currency">Currency</Label>
+                <Select value={bankForm.currency} onValueChange={(value) => setBankForm({ ...bankForm, currency: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.symbol} - {currency.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="bank-balance">Current Balance ({getCurrencySymbol(bankForm.currency)})</Label>
                 <Input
                   id="bank-balance"
                   type="number"

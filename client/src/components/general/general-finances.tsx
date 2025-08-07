@@ -218,7 +218,13 @@ export default function GeneralFinances() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(statistics.totalIncome)}
+                    {selectedAccountId
+                      ? (() => {
+                          const account = settings.bankAccounts.find(acc => acc.id === selectedAccountId);
+                          return formatCurrency(statistics.totalIncome, account?.currency || "USD");
+                        })()
+                      : formatCurrency(statistics.totalIncome)
+                    }
                   </div>
                   <p className="text-xs text-muted-foreground">
                     From {displayedTransactions.filter(t => t.type === "income").length} transactions
@@ -233,7 +239,13 @@ export default function GeneralFinances() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(statistics.totalExpenses)}
+                    {selectedAccountId
+                      ? (() => {
+                          const account = settings.bankAccounts.find(acc => acc.id === selectedAccountId);
+                          return formatCurrency(statistics.totalExpenses, account?.currency || "USD");
+                        })()
+                      : formatCurrency(statistics.totalExpenses)
+                    }
                   </div>
                   <p className="text-xs text-muted-foreground">
                     From {displayedTransactions.filter(t => t.type === "expense").length} transactions
@@ -263,7 +275,13 @@ export default function GeneralFinances() {
                 </CardHeader>
                 <CardContent>
                   <div className={`text-2xl font-bold ${statistics.netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(statistics.netBalance)}
+                    {selectedAccountId
+                      ? (() => {
+                          const account = settings.bankAccounts.find(acc => acc.id === selectedAccountId);
+                          return formatCurrency(statistics.netBalance, account?.currency || "USD");
+                        })()
+                      : formatCurrency(statistics.netBalance)
+                    }
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Income - Expenses
@@ -365,7 +383,14 @@ export default function GeneralFinances() {
                                   transaction.type === "expense" ? "text-red-600" : "text-blue-600"
                                 )}>
                                   {transaction.type === "expense" ? "-" : "+"}
-                                  {formatCurrency(parseFloat(transaction.amount))}
+                                  {(() => {
+                                    const account = transaction.toAccountId 
+                                      ? settings.bankAccounts.find(acc => acc.id === transaction.toAccountId)
+                                      : (transaction.fromAccountId 
+                                          ? settings.bankAccounts.find(acc => acc.id === transaction.fromAccountId)
+                                          : settings.bankAccounts[0]);
+                                    return formatCurrency(parseFloat(transaction.amount), account?.currency || "USD");
+                                  })()}
                                 </span>
                               </TableCell>
                               <TableCell>
