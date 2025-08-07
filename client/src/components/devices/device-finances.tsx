@@ -132,12 +132,15 @@ export default function DeviceFinances() {
 
   const handleDuplicateTransaction = (transaction: DeviceTransaction) => {
     const now = new Date();
-    const duplicatedTransaction = {
-      ...transaction,
-      date: now.toISOString(),
-      id: undefined,
+    const duplicatedTransaction: Partial<DeviceTransaction> = {
+      deviceId: transaction.deviceId,
+      type: transaction.type,
+      amount: transaction.amount,
+      description: `${transaction.description} (Copy)`,
+      category: transaction.category,
+      date: now,
     };
-    setEditingTransaction(duplicatedTransaction as any);
+    setEditingTransaction(duplicatedTransaction as DeviceTransaction);
     setShowTransactionModal(true);
   };
 
@@ -407,7 +410,7 @@ export default function DeviceFinances() {
           onClose={handleTransactionModalClose}
           transaction={editingTransaction}
           devices={devices}
-          selectedDeviceId={selectedDeviceId || undefined}
+
         />
       )}
 

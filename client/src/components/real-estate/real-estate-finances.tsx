@@ -159,12 +159,16 @@ export default function RealEstateFinances() {
 
   const handleDuplicateTransaction = (transaction: RealEstateTransaction) => {
     const now = new Date();
-    const duplicatedTransaction = {
-      ...transaction,
-      date: now.toISOString(),
-      id: undefined,
+    const duplicatedTransaction: Partial<RealEstateTransaction> = {
+      propertyId: transaction.propertyId,
+      projectId: transaction.projectId,
+      type: transaction.type,
+      amount: transaction.amount,
+      description: `${transaction.description} (Copy)`,
+      category: transaction.category,
+      date: now,
     };
-    setEditingTransaction(duplicatedTransaction as any);
+    setEditingTransaction(duplicatedTransaction as RealEstateTransaction);
     setShowTransactionModal(true);
   };
 
@@ -225,6 +229,7 @@ export default function RealEstateFinances() {
         transactions={transactions}
         onAddProperty={handleAddProperty}
         onAddTransaction={handleAddTransaction}
+        onAddProject={handleAddProject}
         onEditProject={handleEditProject}
       />
 

@@ -147,14 +147,17 @@ export default function GeneralFinances() {
   };
 
   const handleDuplicateTransaction = (transaction: GeneralTransaction) => {
-    // Create a copy of the transaction with current date and time, remove the ID
     const now = new Date();
-    const duplicatedTransaction = {
-      ...transaction,
-      date: now.toISOString(), // Current date and time
-      id: undefined, // Remove ID so it creates a new transaction
+    const duplicatedTransaction: Partial<GeneralTransaction> = {
+      type: transaction.type,
+      amount: transaction.amount,
+      description: `${transaction.description} (Copy)`,
+      category: transaction.category,
+      date: now,
+      toAccountId: transaction.toAccountId,
+      fromAccountId: transaction.fromAccountId,
     };
-    setEditingTransaction(duplicatedTransaction as any);
+    setEditingTransaction(duplicatedTransaction as GeneralTransaction);
     setShowModal(true);
   };
 
