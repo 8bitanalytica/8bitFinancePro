@@ -137,6 +137,10 @@ export default function Settings() {
 
   const saveSettings = () => {
     localStorage.setItem("appSettings", JSON.stringify(settings));
+    
+    // Notify other components that settings have been updated
+    window.dispatchEvent(new CustomEvent('accountsUpdated'));
+    
     toast({ title: "Settings saved successfully" });
   };
 
@@ -228,6 +232,9 @@ export default function Settings() {
         bankAccounts: [...prev.bankAccounts, newAccount],
       }));
       toast({ title: "Bank account created successfully" });
+      
+      // Notify other components that accounts have been updated
+      window.dispatchEvent(new CustomEvent('accountsUpdated'));
     }
 
     setShowBankModal(false);

@@ -217,6 +217,10 @@ export default function GeneralFinances() {
         onAccountSelect={handleAccountSelect}
         transactions={transactions}
         onAddTransaction={handleAddTransaction}
+        onRefresh={() => {
+          // Trigger a custom event to notify that accounts should be refreshed
+          window.dispatchEvent(new CustomEvent('accountsUpdated'));
+        }}
       />
 
       {/* Main Content */}

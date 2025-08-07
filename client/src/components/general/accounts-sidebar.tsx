@@ -1,6 +1,7 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Plus, Eye } from "lucide-react";
+import { CreditCard, Plus, Eye, RefreshCw } from "lucide-react";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -12,16 +13,29 @@ interface AccountsSidebarProps {
   onAccountSelect: (accountId: string | null) => void;
   transactions: GeneralTransaction[];
   onAddTransaction: () => void;
+  onRefresh?: () => void;
 }
 
 export default function AccountsSidebar({ 
   selectedAccountId, 
   onAccountSelect, 
   transactions,
-  onAddTransaction 
+  onAddTransaction,
+  onRefresh
 }: AccountsSidebarProps) {
   const settings = useAppSettings();
   const [, setLocation] = useLocation();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Listen for account updates from settings
+  useEffect(() => {
+    const handleAccountsUpdated = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+    
+    window.addEventListener('accountsUpdated', handleAccountsUpdated);
+    return () => window.removeEventListener('accountsUpdated', handleAccountsUpdated);
+  }, []);
 
   const calculateAccountBalance = (accountId: string) => {
     const accountTransactions = transactions.filter(transaction => {
@@ -62,10 +76,17 @@ export default function AccountsSidebar({
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Accounts</h3>
-          <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-1" />
-            Add
-          </Button>
+          <div className="flex gap-2">
+            {onRefresh && (
+              <Button onClick={onRefresh} size="sm" variant="outline" className="p-2">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+            <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          </div>
         </div>
 
         {/* All Accounts View */}
