@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Save, Settings as SettingsIcon, Copy, Check } from "lucide-react";
+import { Plus, X, Save, Settings as SettingsIcon, Copy, Check, TrendingUp, TrendingDown, ArrowUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface BankAccount {
@@ -21,6 +21,13 @@ interface AppSettings {
   generalCategories: string[];
   realEstateCategories: string[];
   deviceCategories: string[];
+  generalIncomeCategories: string[];
+  generalExpenseCategories: string[];
+  generalTransferCategories: string[];
+  realEstateIncomeCategories: string[];
+  realEstateExpenseCategories: string[];
+  deviceIncomeCategories: string[];
+  deviceExpenseCategories: string[];
   bankAccounts: BankAccount[];
 }
 
@@ -38,6 +45,7 @@ const currencies = [
 ];
 
 const defaultSettings: AppSettings = {
+  // Legacy categories (for backward compatibility)
   generalCategories: [
     "Food & Dining",
     "Transportation",
@@ -74,6 +82,74 @@ const defaultSettings: AppSettings = {
     "Warranty",
     "Replacement",
   ],
+  // New categorized categories
+  generalIncomeCategories: [
+    "Salary",
+    "Freelance",
+    "Investment Returns",
+    "Bonus",
+    "Side Hustle",
+    "Gifts",
+    "Refunds",
+    "Other Income",
+  ],
+  generalExpenseCategories: [
+    "Food & Dining",
+    "Transportation",
+    "Shopping",
+    "Entertainment",
+    "Bills & Utilities",
+    "Healthcare",
+    "Education",
+    "Travel",
+    "Insurance",
+    "Other Expenses",
+  ],
+  generalTransferCategories: [
+    "Account Transfer",
+    "Savings",
+    "Investment",
+    "Payment",
+    "Emergency Fund",
+    "Other Transfer",
+  ],
+  realEstateIncomeCategories: [
+    "Rental Income",
+    "Property Sale",
+    "Security Deposit",
+    "Late Fees",
+    "Other Income",
+  ],
+  realEstateExpenseCategories: [
+    "Mortgage/Rent",
+    "Property Tax",
+    "Insurance",
+    "Maintenance",
+    "Repairs",
+    "Utilities",
+    "HOA Fees",
+    "Property Management",
+    "Legal Fees",
+    "Other Expenses",
+  ],
+  deviceIncomeCategories: [
+    "Device Sale",
+    "Trade-in Value",
+    "Insurance Claim",
+    "Warranty Refund",
+    "Other Income",
+  ],
+  deviceExpenseCategories: [
+    "Device Purchase",
+    "Repair",
+    "Upgrade",
+    "Accessory",
+    "Maintenance",
+    "Insurance",
+    "Software/Apps",
+    "Warranty Extension",
+    "Other Expenses",
+  ],
   bankAccounts: [
     {
       id: "1",
@@ -109,6 +185,8 @@ const accountColors = [
 export default function Settings() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [newCategory, setNewCategory] = useState("");
+  const [newExpenseCategory, setNewExpenseCategory] = useState("");
+  const [newTransferCategory, setNewTransferCategory] = useState("");
   const [activeTab, setActiveTab] = useState<keyof Pick<AppSettings, 'generalCategories' | 'realEstateCategories' | 'deviceCategories'>>("generalCategories");
   const [showBankModal, setShowBankModal] = useState(false);
   const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
@@ -167,6 +245,128 @@ export default function Settings() {
     setSettings(prev => ({
       ...prev,
       [activeTab]: prev[activeTab].filter(c => c !== category)
+    }));
+  };
+
+  // Helper functions to get categories by transaction type and module
+  const getIncomeCategories = () => {
+    if (activeTab === "generalCategories") return settings.generalIncomeCategories || [];
+    if (activeTab === "realEstateCategories") return settings.realEstateIncomeCategories || [];
+    if (activeTab === "deviceCategories") return settings.deviceIncomeCategories || [];
+    return [];
+  };
+
+  const getExpenseCategories = () => {
+    if (activeTab === "generalCategories") return settings.generalExpenseCategories || [];
+    if (activeTab === "realEstateCategories") return settings.realEstateExpenseCategories || [];
+    if (activeTab === "deviceCategories") return settings.deviceExpenseCategories || [];
+    return [];
+  };
+
+  const getTransferCategories = () => {
+    if (activeTab === "generalCategories") return settings.generalTransferCategories || [];
+    return [];
+  };
+
+  // Functions to add categories by type
+  const addIncomeCategory = () => {
+    if (!newCategory.trim()) return;
+    
+    const currentCategories = getIncomeCategories();
+    if (currentCategories.includes(newCategory.trim())) {
+      toast({
+        title: "Category already exists",
+        description: "This income category is already in the list.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let categoryKey = "";
+    if (activeTab === "generalCategories") categoryKey = "generalIncomeCategories";
+    else if (activeTab === "realEstateCategories") categoryKey = "realEstateIncomeCategories";
+    else if (activeTab === "deviceCategories") categoryKey = "deviceIncomeCategories";
+
+    setSettings(prev => ({
+      ...prev,
+      [categoryKey]: [...(prev[categoryKey as keyof AppSettings] as string[]), newCategory.trim()]
+    }));
+    setNewCategory("");
+  };
+
+  const addExpenseCategory = () => {
+    if (!newExpenseCategory.trim()) return;
+    
+    const currentCategories = getExpenseCategories();
+    if (currentCategories.includes(newExpenseCategory.trim())) {
+      toast({
+        title: "Category already exists",
+        description: "This expense category is already in the list.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let categoryKey = "";
+    if (activeTab === "generalCategories") categoryKey = "generalExpenseCategories";
+    else if (activeTab === "realEstateCategories") categoryKey = "realEstateExpenseCategories";
+    else if (activeTab === "deviceCategories") categoryKey = "deviceExpenseCategories";
+
+    setSettings(prev => ({
+      ...prev,
+      [categoryKey]: [...(prev[categoryKey as keyof AppSettings] as string[]), newExpenseCategory.trim()]
+    }));
+    setNewExpenseCategory("");
+  };
+
+  const addTransferCategory = () => {
+    if (!newTransferCategory.trim() || activeTab !== "generalCategories") return;
+    
+    if (settings.generalTransferCategories.includes(newTransferCategory.trim())) {
+      toast({
+        title: "Category already exists",
+        description: "This transfer category is already in the list.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSettings(prev => ({
+      ...prev,
+      generalTransferCategories: [...prev.generalTransferCategories, newTransferCategory.trim()]
+    }));
+    setNewTransferCategory("");
+  };
+
+  // Functions to remove categories by type
+  const removeIncomeCategory = (category: string) => {
+    let categoryKey = "";
+    if (activeTab === "generalCategories") categoryKey = "generalIncomeCategories";
+    else if (activeTab === "realEstateCategories") categoryKey = "realEstateIncomeCategories";
+    else if (activeTab === "deviceCategories") categoryKey = "deviceIncomeCategories";
+
+    setSettings(prev => ({
+      ...prev,
+      [categoryKey]: (prev[categoryKey as keyof AppSettings] as string[]).filter(c => c !== category)
+    }));
+  };
+
+  const removeExpenseCategory = (category: string) => {
+    let categoryKey = "";
+    if (activeTab === "generalCategories") categoryKey = "generalExpenseCategories";
+    else if (activeTab === "realEstateCategories") categoryKey = "realEstateExpenseCategories";
+    else if (activeTab === "deviceCategories") categoryKey = "deviceExpenseCategories";
+
+    setSettings(prev => ({
+      ...prev,
+      [categoryKey]: (prev[categoryKey as keyof AppSettings] as string[]).filter(c => c !== category)
+    }));
+  };
+
+  const removeTransferCategory = (category: string) => {
+    setSettings(prev => ({
+      ...prev,
+      generalTransferCategories: prev.generalTransferCategories.filter(c => c !== category)
     }));
   };
 
@@ -333,19 +533,19 @@ npm run build && npm start # production`;
         {/* Category Management */}
         <Card>
           <CardHeader>
-            <CardTitle>Expense Categories</CardTitle>
-            <p className="text-sm text-gray-600">Manage categories for different modules</p>
+            <CardTitle>Transaction Categories</CardTitle>
+            <p className="text-sm text-gray-600">Manage categories for different modules and transaction types</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Category Tabs */}
+            <div className="space-y-6">
+              {/* Module Tabs */}
               <div className="flex gap-2 mb-4">
                 <Button
                   variant={activeTab === "generalCategories" ? "default" : "outline"}
                   onClick={() => setActiveTab("generalCategories")}
                   size="sm"
                 >
-                  General
+                  General Finances
                 </Button>
                 <Button
                   variant={activeTab === "realEstateCategories" ? "default" : "outline"}
@@ -359,46 +559,124 @@ npm run build && npm start # production`;
                   onClick={() => setActiveTab("deviceCategories")}
                   size="sm"
                 >
-                  Devices
+                  Device Management
                 </Button>
               </div>
 
-              {/* Add New Category */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter new category name"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && addCategory()}
-                />
-                <Button onClick={addCategory} size="sm">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Category List */}
-              <div className="space-y-2">
-                <Label>
-                  {activeTab === "generalCategories" && "General Finance Categories"}
-                  {activeTab === "realEstateCategories" && "Real Estate Categories"}
-                  {activeTab === "deviceCategories" && "Device Categories"}
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {settings[activeTab].map((category) => (
-                    <Badge key={category} variant="secondary" className="flex items-center gap-1">
-                      {category}
-                      <button
-                        onClick={() => removeCategory(category)}
-                        className="ml-1 hover:text-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+              {/* Transaction Type Sections */}
+              <div className="space-y-6">
+                {/* Income Categories */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold text-green-700 flex items-center">
+                      <TrendingUp className="h-5 w-5 mr-2" />
+                      Income Categories
+                    </h4>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add new income category..."
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && addIncomeCategory()}
+                    />
+                    <Button onClick={addIncomeCategory} size="sm" className="bg-green-600 hover:bg-green-700">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {getIncomeCategories().map((category) => (
+                      <Badge key={category} className="bg-green-100 text-green-800 flex items-center gap-1">
+                        {category}
+                        <button
+                          onClick={() => removeIncomeCategory(category)}
+                          className="ml-1 hover:text-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {getIncomeCategories().length} income categories
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500">
-                  {settings[activeTab].length} categories
-                </p>
+
+                {/* Expense Categories */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold text-red-700 flex items-center">
+                      <TrendingDown className="h-5 w-5 mr-2" />
+                      Expense Categories
+                    </h4>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add new expense category..."
+                      value={newExpenseCategory}
+                      onChange={(e) => setNewExpenseCategory(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && addExpenseCategory()}
+                    />
+                    <Button onClick={addExpenseCategory} size="sm" className="bg-red-600 hover:bg-red-700">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {getExpenseCategories().map((category) => (
+                      <Badge key={category} className="bg-red-100 text-red-800 flex items-center gap-1">
+                        {category}
+                        <button
+                          onClick={() => removeExpenseCategory(category)}
+                          className="ml-1 hover:text-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    {getExpenseCategories().length} expense categories
+                  </p>
+                </div>
+
+                {/* Transfer Categories (only for General Finances) */}
+                {activeTab === "generalCategories" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-lg font-semibold text-blue-700 flex items-center">
+                        <ArrowUpDown className="h-5 w-5 mr-2" />
+                        Transfer Categories
+                      </h4>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add new transfer category..."
+                        value={newTransferCategory}
+                        onChange={(e) => setNewTransferCategory(e.target.value)}
+                        onKeyPress={(e) => e.key === "Enter" && addTransferCategory()}
+                      />
+                      <Button onClick={addTransferCategory} size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {getTransferCategories().map((category) => (
+                        <Badge key={category} className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                          {category}
+                          <button
+                            onClick={() => removeTransferCategory(category)}
+                            className="ml-1 hover:text-red-600"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      {getTransferCategories().length} transfer categories
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
