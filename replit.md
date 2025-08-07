@@ -10,6 +10,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Project Management UX Redesign (2025-08-07)**: Moved "Add Project" button from sidebar to property-specific pages for better property-project linking workflow
+- **Property-Project Auto-linking (2025-08-07)**: Projects created within a property page are automatically linked to that property
+- **Project Expense Tracking (2025-08-07)**: Added dedicated project expense sections within property pages showing budget usage, progress bars, and recent transactions
+- **Device Warranty Auto-calculation (2025-08-07)**: Implemented automatic warranty expiry calculation (purchase date + 2 years) with read-only warranty field
 - **Intelligent Dashboard (2025-08-07)**: Implemented rich financial dashboard with upcoming recurring transactions, per-account monthly analysis, and category spending breakdown with visual analytics
 - **Custom Account Icons (2025-08-07)**: Added ability to select predefined icons or upload custom PNG/JPEG images for bank accounts during creation
 - **Dashboard Removal (2025-08-07)**: Removed standalone dashboard page as requested, keeping only the integrated dashboard functionality within general finances module
@@ -72,6 +76,7 @@ The application includes a comprehensive settings system with:
 
 ### Enhanced Device Management
 The device management system now includes:
+- **Automatic Warranty Calculation**: Warranty expiry automatically calculated as purchase date + 2 years
 - **Comprehensive Device Tracking**: Support for household appliances and all device types
 - **Receipt Management**: Upload and store receipt images with device records
 - **Device Images**: Upload and display device photos for easy identification
@@ -92,8 +97,10 @@ The application includes a comprehensive bank connection system:
 
 ### Frontend Components
 - **Intelligent Dashboard**: Rich financial overview with upcoming recurring transactions, per-account monthly analytics, current balances, and category spending analysis with visual breakdown
+- **Property-Project Management**: Projects creation positioned within property pages with automatic property-linking workflow
+- **Project Expense Tracking**: Dedicated project sections showing budget progress, expense breakdown, and transaction history within property pages
 - **Sidebar**: Navigation between three modules (general, real estate, devices) with settings moved to tools section
-- **Modal System**: Reusable modals for adding/editing transactions, properties, and devices
+- **Modal System**: Reusable modals for adding/editing transactions, properties, devices, and projects
 - **Settings Module**: Comprehensive settings management with currency, categories, and bank accounts
 - **Bank Account Display**: Visual bank account cards in general finances with color coding and balance tracking
 - **UI Components**: Comprehensive set of accessible components from shadcn/ui

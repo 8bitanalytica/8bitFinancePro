@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Home, Edit, Trash2, Search, Eye, ChevronDown, Copy } from "lucide-react";
+import { TrendingUp, TrendingDown, Home, Edit, Trash2, Search, Eye, ChevronDown, Copy, FolderOpen, Plus } from "lucide-react";
 import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
 import PropertyModal from "@/components/modals/property-modal";
@@ -125,6 +125,12 @@ export default function RealEstateFinances() {
     setShowProjectModal(true);
   };
 
+  const handleAddProjectToProperty = (propertyId: number) => {
+    setSelectedPropertyId(propertyId); // Set the property context
+    setEditingProject(undefined);
+    setShowProjectModal(true);
+  };
+
   const handleEditProject = (project: PropertyProject) => {
     setEditingProject(project);
     setShowProjectModal(true);
@@ -201,6 +207,12 @@ export default function RealEstateFinances() {
   };
 
   const selectedProperty = selectedPropertyId ? properties.find(p => p.id === selectedPropertyId) : null;
+  
+  // Get projects for selected property
+  const selectedPropertyProjects = useMemo(() => {
+    if (!selectedPropertyId) return [];
+    return projects.filter(project => project.propertyId === selectedPropertyId);
+  }, [projects, selectedPropertyId]);
 
   return (
     <div className="flex h-full">
@@ -213,7 +225,6 @@ export default function RealEstateFinances() {
         transactions={transactions}
         onAddProperty={handleAddProperty}
         onAddTransaction={handleAddTransaction}
-        onAddProject={handleAddProject}
         onEditProject={handleEditProject}
       />
 
@@ -221,16 +232,31 @@ export default function RealEstateFinances() {
       <div className="flex-1 overflow-hidden">
         <div className="p-6 space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {selectedProperty ? selectedProperty.name : "Real Estate Portfolio"}
-            </h1>
-            <p className="text-gray-600 mt-1">
-              {selectedProperty 
-                ? `${selectedProperty.address} - ${selectedProperty.type}`
-                : "Manage your real estate investments and track income/expenses"
-              }
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {selectedProperty ? selectedProperty.name : "Real Estate Portfolio"}
+              </h1>
+              <p className="text-gray-600 mt-1">
+                {selectedProperty 
+                  ? `${selectedProperty.address} - ${selectedProperty.type}`
+                  : "Manage your real estate investments and track income/expenses"
+                }
+              </p>
+            </div>
+            
+            {/* Add Project Button - Only shown when a property is selected */}
+            {selectedProperty && (
+              <Button 
+                onClick={() => handleAddProjectToProperty(selectedProperty.id)} 
+                size="sm" 
+                variant="outline" 
+                className="text-purple-600 border-purple-200 hover:bg-purple-50"
+              >
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Add Project
+              </Button>
+            )}
           </div>
 
           {/* Statistics Cards */}
@@ -286,6 +312,153 @@ export default function RealEstateFinances() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Projects Section - Only shown when a property is selected */}
+          {selectedProperty && selectedPropertyProjects.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5 text-purple-600" />
+                  Active Projects for {selectedProperty.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {selectedPropertyProjects.map((project) => {
+                    // Filter transactions for this specific project
+                    const projectTransactions = displayedTransactions.filter(t => t.projectId === project.id);
+                    const projectExpenses = projectTransactions
+                      .filter(t => t.type === 'expense')
+                      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                    const projectBudget = project.budget ? parseFloat(project.budget) : 0;
+                    const budgetUsed = projectBudget > 0 ? (projectExpenses / projectBudget) * 100 : 0;
+
+                    return (
+                      <div key={project.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{project.name}</h4>
+                            <p className="text-sm text-gray-600">{project.description}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="secondary" 
+                              className={cn(
+                                "text-xs",
+                                project.status === 'active' ? 'bg-green-100 text-green-800' :
+                                project.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                              )}
+                            >
+                              {project.status}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditProject(project)}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Project Budget and Expenses */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-gray-500">Budget</p>
+                            <p className="font-semibold text-blue-600">
+                              {project.budget ? formatCurrency(parseFloat(project.budget)) : 'No budget set'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Spent</p>
+                            <p className="font-semibold text-red-600">
+                              {formatCurrency(projectExpenses)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Remaining</p>
+                            <p className={cn(
+                              "font-semibold",
+                              (projectBudget - projectExpenses) >= 0 ? "text-green-600" : "text-red-600"
+                            )}>
+                              {projectBudget > 0 ? formatCurrency(projectBudget - projectExpenses) : 'No budget'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Budget Progress Bar */}
+                        {projectBudget > 0 && (
+                          <div className="mb-4">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <span>Budget Usage</span>
+                              <span>{budgetUsed.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  "h-2 rounded-full transition-all",
+                                  budgetUsed > 100 ? "bg-red-500" :
+                                  budgetUsed > 80 ? "bg-yellow-500" : "bg-green-500"
+                                )}
+                                style={{ width: `${Math.min(budgetUsed, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Project Transactions */}
+                        {projectTransactions.length > 0 && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 mb-2">Recent Project Expenses</h5>
+                            <div className="space-y-2">
+                              {projectTransactions.slice(0, 3).map((transaction) => (
+                                <div key={transaction.id} className="flex justify-between items-center text-sm">
+                                  <div>
+                                    <p className="font-medium">{transaction.description}</p>
+                                    <p className="text-gray-500">{format(new Date(transaction.date), "MMM dd, yyyy")}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className={cn(
+                                      "font-semibold",
+                                      transaction.type === 'income' ? "text-green-600" : "text-red-600"
+                                    )}>
+                                      {transaction.type === 'expense' ? '-' : '+'}{formatCurrency(parseFloat(transaction.amount))}
+                                    </p>
+                                    <p className="text-xs text-gray-500">{transaction.category}</p>
+                                  </div>
+                                </div>
+                              ))}
+                              {projectTransactions.length > 3 && (
+                                <p className="text-xs text-gray-500 text-center pt-2">
+                                  +{projectTransactions.length - 3} more transactions
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {projectTransactions.length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            <p className="text-sm">No expenses recorded for this project yet</p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="mt-2"
+                              onClick={handleAddTransaction}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Project Expense
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Filters and Search */}
           <div className="flex gap-4">

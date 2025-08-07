@@ -78,10 +78,6 @@ export default function PropertiesSidebar({
               <Plus className="h-4 w-4 mr-1" />
               Property
             </Button>
-            <Button onClick={onAddProject} size="sm" variant="outline" className="text-purple-600 border-purple-200 hover:bg-purple-50">
-              <FolderOpen className="h-4 w-4 mr-1" />
-              Project
-            </Button>
             <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-1" />
               Transaction
