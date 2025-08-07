@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown, Copy } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown, Copy, Repeat } from "lucide-react";
 import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
+import { RecurringTransactionModal } from "@/components/modals/recurring-transaction-modal";
+import { RecurringTransactionsList } from "@/components/recurring-transactions/recurring-transactions-list";
 import AccountsSidebar from "@/components/general/accounts-sidebar";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
@@ -24,6 +26,7 @@ export default function GeneralFinances() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [visibleTransactions, setVisibleTransactions] = useState(30);
+  const [activeTab, setActiveTab] = useState("transactions");
   const settings = useAppSettings();
   const { toast } = useToast();
 
@@ -502,34 +505,67 @@ export default function GeneralFinances() {
               </div>
             )}
 
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search transactions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  {settings.generalCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Navigation Tabs */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab("transactions")}
+                  className={cn(
+                    "py-2 px-1 border-b-2 font-medium text-sm",
+                    activeTab === "transactions"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  Transactions
+                </button>
+                <button
+                  onClick={() => setActiveTab("recurring")}
+                  className={cn(
+                    "py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2",
+                    activeTab === "recurring"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  <Repeat className="h-4 w-4" />
+                  Recurring Transactions
+                </button>
+              </nav>
             </div>
 
-            {/* Transactions Table */}
-            <Card>
+            {activeTab === "transactions" && (
+              <>
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search transactions..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="All categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All categories</SelectItem>
+                      {settings.generalCategories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {activeTab === "transactions" && (
+              <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Transactions</CardTitle>
@@ -669,7 +705,26 @@ export default function GeneralFinances() {
                   </>
                 )}
               </CardContent>
-            </Card>
+              </Card>
+            )}
+
+            {activeTab === "recurring" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Recurring Transactions</h3>
+                  <RecurringTransactionModal 
+                    module="general"
+                    trigger={
+                      <Button>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Recurring Transaction
+                      </Button>
+                    }
+                  />
+                </div>
+                <RecurringTransactionsList module="general" />
+              </div>
+            )}
           </div>
         </div>
       </div>

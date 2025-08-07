@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, decimal, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, decimal, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -124,6 +124,52 @@ export type InsertDevice = z.infer<typeof insertDeviceSchema>;
 
 export type DeviceTransaction = typeof deviceTransactions.$inferSelect;
 export type InsertDeviceTransaction = z.infer<typeof insertDeviceTransactionSchema>;
+
+// Recurring transactions table
+export const recurringTransactions = pgTable("recurring_transactions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // "income", "expense", or "transfer"
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(),
+  accountId: text("account_id"),
+  frequency: text("frequency").notNull(), // daily, weekly, monthly, quarterly, yearly
+  intervalCount: integer("interval_count").default(1).notNull(), // every X frequency units
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date"), // null means infinite
+  nextDueDate: date("next_due_date").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  lastProcessedDate: date("last_processed_date"),
+  totalOccurrences: integer("total_occurrences"), // null means infinite
+  currentOccurrence: integer("current_occurrence").default(0).notNull(),
+  module: text("module").default("general").notNull(), // general, real-estate, devices
+  propertyId: integer("property_id").references(() => properties.id, { onDelete: "cascade" }),
+  deviceId: integer("device_id").references(() => devices.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRecurringTransactionSchema = createInsertSchema(recurringTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  currentOccurrence: true,
+  lastProcessedDate: true,
+}).extend({
+  startDate: z.string().or(z.date()).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  endDate: z.string().or(z.date()).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ).optional(),
+  nextDueDate: z.string().or(z.date()).transform((val) => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+});
+
+export type RecurringTransaction = typeof recurringTransactions.$inferSelect;
+export type InsertRecurringTransaction = z.infer<typeof insertRecurringTransactionSchema>;
 
 // Export bank connection tables
 export * from "./bank-connection-schema";

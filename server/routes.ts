@@ -9,6 +9,7 @@ import {
   insertDeviceTransactionSchema,
   insertBankConnectionSchema,
   insertTransactionImportSchema,
+  insertRecurringTransactionSchema,
 } from "@shared/schema";
 import { ProviderFactory } from "./bank-providers/provider-factory";
 import type { TransactionData } from "./bank-providers/base-provider";
@@ -619,6 +620,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Failed to test credentials",
         error: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // Recurring Transactions Routes
+  app.get("/api/recurring-transactions", async (req, res) => {
+    try {
+      const { module } = req.query;
+      
+      if (module && typeof module === 'string') {
+        const transactions = await storage.getRecurringTransactionsByModule(module);
+        res.json(transactions);
+      } else {
+        const transactions = await storage.getRecurringTransactions();
+        res.json(transactions);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch recurring transactions" });
+    }
+  });
+
+  app.get("/api/recurring-transactions/due", async (req, res) => {
+    try {
+      const dueTransactions = await storage.getDueRecurringTransactions();
+      res.json(dueTransactions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch due recurring transactions" });
+    }
+  });
+
+  app.get("/api/recurring-transactions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const transaction = await storage.getRecurringTransaction(id);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Recurring transaction not found" });
+      }
+      
+      res.json(transaction);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch recurring transaction" });
+    }
+  });
+
+  app.post("/api/recurring-transactions", async (req, res) => {
+    try {
+      const validatedTransaction = insertRecurringTransactionSchema.parse(req.body);
+      const transaction = await storage.createRecurringTransaction(validatedTransaction);
+      res.status(201).json(transaction);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Validation error", 
+          errors: error.errors 
+        });
+      }
+      res.status(500).json({ message: "Failed to create recurring transaction" });
+    }
+  });
+
+  app.put("/api/recurring-transactions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const transaction = await storage.updateRecurringTransaction(id, updates);
+      
+      if (!transaction) {
+        return res.status(404).json({ message: "Recurring transaction not found" });
+      }
+      
+      res.json(transaction);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update recurring transaction" });
+    }
+  });
+
+  app.delete("/api/recurring-transactions/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteRecurringTransaction(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Recurring transaction not found" });
+      }
+      
+      res.json({ message: "Recurring transaction deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete recurring transaction" });
+    }
+  });
+
+  app.post("/api/recurring-transactions/:id/process", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.processRecurringTransaction(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Failed to process recurring transaction" });
+      }
+      
+      res.json({ message: "Recurring transaction processed successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to process recurring transaction" });
+    }
+  });
+
+  // Process all due recurring transactions
+  app.post("/api/recurring-transactions/process-due", async (req, res) => {
+    try {
+      const dueTransactions = await storage.getDueRecurringTransactions();
+      const results = [];
+      
+      for (const transaction of dueTransactions) {
+        const success = await storage.processRecurringTransaction(transaction.id);
+        results.push({
+          id: transaction.id,
+          name: transaction.name,
+          success
+        });
+      }
+      
+      res.json({ 
+        processed: results.filter(r => r.success).length,
+        total: results.length,
+        results 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to process due recurring transactions" });
     }
   });
 

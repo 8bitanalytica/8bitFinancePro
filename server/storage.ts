@@ -19,7 +19,10 @@ import {
   devices,
   deviceTransactions,
   bankConnections,
-  transactionImports
+  transactionImports,
+  recurringTransactions,
+  type RecurringTransaction,
+  type InsertRecurringTransaction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -75,6 +78,16 @@ export interface IStorage {
   getTransactionImportsByConnection(connectionId: number): Promise<TransactionImport[]>;
   createTransactionImport(importRecord: InsertTransactionImport): Promise<TransactionImport>;
   updateTransactionImport(id: number, importRecord: Partial<InsertTransactionImport>): Promise<TransactionImport | undefined>;
+  
+  // Recurring Transactions
+  getRecurringTransactions(): Promise<RecurringTransaction[]>;
+  getRecurringTransactionsByModule(module: string): Promise<RecurringTransaction[]>;
+  getRecurringTransaction(id: number): Promise<RecurringTransaction | undefined>;
+  getDueRecurringTransactions(): Promise<RecurringTransaction[]>;
+  createRecurringTransaction(transaction: InsertRecurringTransaction): Promise<RecurringTransaction>;
+  updateRecurringTransaction(id: number, transaction: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction | undefined>;
+  deleteRecurringTransaction(id: number): Promise<boolean>;
+  processRecurringTransaction(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -85,6 +98,7 @@ export class MemStorage implements IStorage {
   private deviceTransactions: Map<number, DeviceTransaction>;
   private bankConnections: Map<number, BankConnection>;
   private transactionImports: Map<number, TransactionImport>;
+  private recurringTransactions: Map<number, RecurringTransaction>;
   private currentGeneralTransactionId: number;
   private currentPropertyId: number;
   private currentRealEstateTransactionId: number;
@@ -92,6 +106,7 @@ export class MemStorage implements IStorage {
   private currentDeviceTransactionId: number;
   private currentBankConnectionId: number;
   private currentTransactionImportId: number;
+  private currentRecurringTransactionId: number;
 
   constructor() {
     this.generalTransactions = new Map();
@@ -101,6 +116,7 @@ export class MemStorage implements IStorage {
     this.deviceTransactions = new Map();
     this.bankConnections = new Map();
     this.transactionImports = new Map();
+    this.recurringTransactions = new Map();
     this.currentGeneralTransactionId = 1;
     this.currentPropertyId = 1;
     this.currentRealEstateTransactionId = 1;
@@ -108,6 +124,7 @@ export class MemStorage implements IStorage {
     this.currentDeviceTransactionId = 1;
     this.currentBankConnectionId = 1;
     this.currentTransactionImportId = 1;
+    this.currentRecurringTransactionId = 1;
   }
 
   // General Transactions
@@ -380,6 +397,148 @@ export class MemStorage implements IStorage {
     const updated = { ...existing, ...updates };
     this.transactionImports.set(id, updated);
     return updated;
+  }
+
+  // Recurring Transactions
+  async getRecurringTransactions(): Promise<RecurringTransaction[]> {
+    return Array.from(this.recurringTransactions.values()).sort((a, b) => 
+      new Date(a.nextDueDate).getTime() - new Date(b.nextDueDate).getTime()
+    );
+  }
+
+  async getRecurringTransactionsByModule(module: string): Promise<RecurringTransaction[]> {
+    return Array.from(this.recurringTransactions.values())
+      .filter(rt => rt.module === module)
+      .sort((a, b) => new Date(a.nextDueDate).getTime() - new Date(b.nextDueDate).getTime());
+  }
+
+  async getRecurringTransaction(id: number): Promise<RecurringTransaction | undefined> {
+    return this.recurringTransactions.get(id);
+  }
+
+  async getDueRecurringTransactions(): Promise<RecurringTransaction[]> {
+    const today = new Date();
+    return Array.from(this.recurringTransactions.values())
+      .filter(rt => rt.isActive && new Date(rt.nextDueDate) <= today);
+  }
+
+  async createRecurringTransaction(insertTransaction: InsertRecurringTransaction): Promise<RecurringTransaction> {
+    const id = this.currentRecurringTransactionId++;
+    const transaction: RecurringTransaction = {
+      ...insertTransaction,
+      id,
+      currentOccurrence: 0,
+      lastProcessedDate: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.recurringTransactions.set(id, transaction);
+    return transaction;
+  }
+
+  async updateRecurringTransaction(id: number, updates: Partial<InsertRecurringTransaction>): Promise<RecurringTransaction | undefined> {
+    const existing = this.recurringTransactions.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates, updatedAt: new Date() };
+    this.recurringTransactions.set(id, updated);
+    return updated;
+  }
+
+  async deleteRecurringTransaction(id: number): Promise<boolean> {
+    return this.recurringTransactions.delete(id);
+  }
+
+  async processRecurringTransaction(id: number): Promise<boolean> {
+    const recurring = this.recurringTransactions.get(id);
+    if (!recurring || !recurring.isActive) return false;
+
+    try {
+      // Create the actual transaction based on module
+      switch (recurring.module) {
+        case 'general':
+          await this.createGeneralTransaction({
+            type: recurring.type,
+            amount: parseFloat(recurring.amount),
+            description: `${recurring.description} (Recurring)`,
+            category: recurring.category,
+            date: new Date(),
+            fromAccountId: recurring.type === 'expense' ? recurring.accountId : null,
+            toAccountId: recurring.type === 'income' ? recurring.accountId : null,
+          });
+          break;
+        case 'real-estate':
+          if (recurring.propertyId) {
+            await this.createRealEstateTransaction({
+              propertyId: recurring.propertyId,
+              type: recurring.type,
+              amount: parseFloat(recurring.amount),
+              description: `${recurring.description} (Recurring)`,
+              category: recurring.category,
+              date: new Date(),
+            });
+          }
+          break;
+        case 'devices':
+          if (recurring.deviceId) {
+            await this.createDeviceTransaction({
+              deviceId: recurring.deviceId,
+              type: recurring.type,
+              amount: parseFloat(recurring.amount),
+              description: `${recurring.description} (Recurring)`,
+              category: recurring.category,
+              date: new Date(),
+            });
+          }
+          break;
+      }
+
+      // Calculate next due date
+      const nextDate = this.calculateNextDueDate(recurring);
+      const currentOccurrence = recurring.currentOccurrence + 1;
+
+      // Check if recurring should be deactivated
+      const shouldDeactivate = recurring.totalOccurrences && 
+        currentOccurrence >= recurring.totalOccurrences;
+
+      // Update recurring transaction
+      await this.updateRecurringTransaction(id, {
+        nextDueDate: nextDate,
+        lastProcessedDate: new Date(),
+        currentOccurrence,
+        isActive: !shouldDeactivate,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error processing recurring transaction:', error);
+      return false;
+    }
+  }
+
+  private calculateNextDueDate(recurring: RecurringTransaction): Date {
+    const currentDate = new Date(recurring.nextDueDate);
+    const interval = recurring.intervalCount || 1;
+
+    switch (recurring.frequency) {
+      case 'daily':
+        currentDate.setDate(currentDate.getDate() + interval);
+        break;
+      case 'weekly':
+        currentDate.setDate(currentDate.getDate() + (interval * 7));
+        break;
+      case 'monthly':
+        currentDate.setMonth(currentDate.getMonth() + interval);
+        break;
+      case 'quarterly':
+        currentDate.setMonth(currentDate.getMonth() + (interval * 3));
+        break;
+      case 'yearly':
+        currentDate.setFullYear(currentDate.getFullYear() + interval);
+        break;
+    }
+
+    return currentDate;
   }
 }
 
