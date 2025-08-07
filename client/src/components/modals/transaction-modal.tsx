@@ -30,7 +30,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const { toast } = useToast();
   const settings = useAppSettings();
   const currency = useCurrency();
-  const isEditing = !!transaction;
+  const isEditing = !!transaction && !!(transaction as any).id;
   const isRealEstate = type === "real-estate";
 
   // Fetch properties for Real Estate category
