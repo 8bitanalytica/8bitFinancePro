@@ -519,18 +519,6 @@ export default function GeneralFinances() {
                 >
                   Transactions
                 </button>
-                <button
-                  onClick={() => setActiveTab("recurring")}
-                  className={cn(
-                    "py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2",
-                    activeTab === "recurring"
-                      ? "border-primary text-primary"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  )}
-                >
-                  <Repeat className="h-4 w-4" />
-                  Recurring Transactions
-                </button>
               </nav>
             </div>
 
@@ -708,23 +696,7 @@ export default function GeneralFinances() {
               </Card>
             )}
 
-            {activeTab === "recurring" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">Recurring Transactions</h3>
-                  <RecurringTransactionModal 
-                    module="general"
-                    trigger={
-                      <Button>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Recurring Transaction
-                      </Button>
-                    }
-                  />
-                </div>
-                <RecurringTransactionsList module="general" />
-              </div>
-            )}
+            
           </div>
         </div>
       </div>
