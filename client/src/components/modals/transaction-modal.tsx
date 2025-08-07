@@ -8,7 +8,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { generalTransactionsApi, realEstateTransactionsApi, devicesApi } from "@/lib/api";
+import { generalTransactionsApi, realEstateTransactionsApi, devicesApi, propertiesApi } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
 import { insertGeneralTransactionSchema, insertRealEstateTransactionSchema, insertDeviceSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/components/settings/settings";
@@ -31,6 +32,18 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const isEditing = !!transaction;
   const isRealEstate = type === "real-estate";
 
+  // Fetch properties for Real Estate category
+  const { data: propertiesList = [] } = useQuery({
+    queryKey: ['/api/properties'],
+    enabled: !isRealEstate, // Only fetch when in general finances
+  });
+
+  // Fetch devices for Device category
+  const { data: devicesList = [] } = useQuery({
+    queryKey: ['/api/devices'],
+    enabled: !isRealEstate, // Only fetch when in general finances
+  });
+
   const getCurrencySymbol = (code: string) => {
     const currencies = {
       USD: "$", EUR: "€", GBP: "£", JPY: "¥", CAD: "C$", AUD: "A$", 
@@ -41,6 +54,24 @@ export default function TransactionModal({ transaction, onClose, type, propertie
 
   const categories = isRealEstate ? settings.realEstateCategories : settings.generalCategories;
 
+  // Real Estate subcategories
+  const realEstateSubcategories = [
+    "Gas",
+    "Electricity", 
+    "Water",
+    "Heating",
+    "Internet/Cable",
+    "Property Tax",
+    "Insurance",
+    "Maintenance",
+    "Repairs",
+    "HOA Fees",
+    "Security",
+    "Cleaning",
+    "Landscaping",
+    "Other Utilities"
+  ];
+
   const baseSchema = isRealEstate ? insertRealEstateTransactionSchema : insertGeneralTransactionSchema;
   const formSchema = baseSchema.extend({
     date: z.string().min(1, "Date is required"),
@@ -50,7 +81,11 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       fromAccountId: z.string().optional(),
       toAccountId: z.string().optional(),
     }),
+    // Real Estate fields (only used when category is 'Real Estate')
+    propertyId: z.number().optional(),
+    realEstateSubcategory: z.string().optional(),
     // Device fields (only used when category is 'Device')
+    deviceId: z.number().optional(),
     deviceName: z.string().optional(),
     deviceBrand: z.string().optional(),
     deviceModel: z.string().optional(),
@@ -70,6 +105,24 @@ export default function TransactionModal({ transaction, onClose, type, propertie
         code: z.ZodIssueCode.custom,
         message: "Device name is required when category is 'Device'",
         path: ['deviceName'],
+      });
+    }
+    
+    // Validate property selection is required when category is 'Real Estate'
+    if (data.category === 'Real Estate' && !data.propertyId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Property selection is required when category is 'Real Estate'",
+        path: ['propertyId'],
+      });
+    }
+    
+    // Validate real estate subcategory is required when category is 'Real Estate'
+    if (data.category === 'Real Estate' && !data.realEstateSubcategory?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Real estate subcategory is required when category is 'Real Estate'",
+        path: ['realEstateSubcategory'],
       });
     }
     
@@ -123,7 +176,11 @@ export default function TransactionModal({ transaction, onClose, type, propertie
         fromAccountId: ('fromAccountId' in transaction ? transaction.fromAccountId : "") || "",
         toAccountId: ('toAccountId' in transaction ? transaction.toAccountId : "") || "",
       }),
+      // Real Estate fields defaults
+      propertyId: ('propertyId' in transaction ? transaction.propertyId : undefined) || undefined,
+      realEstateSubcategory: ('realEstateSubcategory' in transaction ? transaction.realEstateSubcategory : "") || "",
       // Device fields defaults
+      deviceId: ('deviceId' in transaction ? transaction.deviceId : undefined) || undefined,
       deviceName: "",
       deviceBrand: "",
       deviceModel: "",
@@ -146,10 +203,14 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       ...(isRealEstate && { propertyId: 0 }),
       // Account fields (only for general finances)
       ...(!isRealEstate && {
-        fromAccountId: "",
-        toAccountId: "",
+        fromAccountId: selectedAccountId || "",
+        toAccountId: selectedAccountId || "",
       }),
+      // Real Estate fields defaults
+      propertyId: undefined,
+      realEstateSubcategory: "",
       // Device fields defaults
+      deviceId: undefined,
       deviceName: "",
       deviceBrand: "",
       deviceModel: "",
@@ -169,6 +230,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const watchedType = form.watch("type");
   const watchedToAccountId = form.watch("toAccountId");
   const isDeviceCategory = watchedCategory === "Device";
+  const isRealEstateCategory = watchedCategory === "Real Estate";
   const isTransfer = watchedType === "transfer";
 
   // When there's a selectedAccountId, get that account info
@@ -308,7 +370,21 @@ export default function TransactionModal({ transaction, onClose, type, propertie
 
         if (isEditing) {
           await generalTransactionsApi.update(transaction.id, generalData);
-          toast({ title: "Transaction updated successfully" });
+          
+          // If category is 'Real Estate' and we have the required fields, also update real estate
+          if (values.category === "Real Estate" && values.propertyId && values.realEstateSubcategory) {
+            await realEstateTransactionsApi.create({
+              propertyId: values.propertyId,
+              type: values.type,
+              amount: values.amount,
+              description: `${values.description} (${values.realEstateSubcategory})`,
+              category: values.realEstateSubcategory,
+              date: new Date(`${values.date}T${values.time}:00`),
+            });
+            toast({ title: "Transaction updated in both accounts and real estate" });
+          } else {
+            toast({ title: "Transaction updated successfully" });
+          }
         } else {
           await generalTransactionsApi.create(generalData);
           
@@ -334,6 +410,17 @@ export default function TransactionModal({ transaction, onClose, type, propertie
             
             await devicesApi.create(deviceData);
             toast({ title: "Transaction and device created successfully" });
+          } else if (values.category === "Real Estate" && values.propertyId && values.realEstateSubcategory) {
+            // Also create entry in real estate transactions for dual tracking
+            await realEstateTransactionsApi.create({
+              propertyId: values.propertyId,
+              type: values.type,
+              amount: values.amount,
+              description: `${values.description} (${values.realEstateSubcategory})`,
+              category: values.realEstateSubcategory,
+              date: new Date(`${values.date}T${values.time}:00`),
+            });
+            toast({ title: "Transaction created in both accounts and real estate" });
           } else {
             toast({ title: "Transaction created successfully" });
           }
@@ -724,7 +811,66 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                 />
               </div>
 
-              {/* Property Selection for Real Estate */}
+              {/* Real Estate specific fields when category is 'Real Estate' */}
+              {isRealEstateCategory && (
+                <div className="space-y-4 p-4 border rounded-lg bg-orange-50">
+                  <h3 className="font-semibold text-orange-900">Real Estate Information</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="propertyId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Property</FormLabel>
+                          <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select property" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {propertiesList.map((property) => (
+                                <SelectItem key={property.id} value={property.id.toString()}>
+                                  {property.name} - {property.address}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="realEstateSubcategory"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subcategory</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select subcategory" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {realEstateSubcategories.map((subcategory) => (
+                                <SelectItem key={subcategory} value={subcategory}>
+                                  {subcategory}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Property Selection for Real Estate module */}
               {isRealEstate && (
                 <FormField
                   control={form.control}
@@ -759,6 +905,32 @@ export default function TransactionModal({ transaction, onClose, type, propertie
             {isDeviceCategory && (
               <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
                 <h3 className="font-semibold text-blue-900">Device Information</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="deviceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Existing Device (Optional)</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} value={field.value?.toString() || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select existing device or leave empty for new" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Create new device</SelectItem>
+                          {devicesList.map((device) => (
+                            <SelectItem key={device.id} value={device.id.toString()}>
+                              {device.name} - {device.brand} {device.model}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField

@@ -12,6 +12,11 @@ export const generalTransactions = pgTable("general_transactions", {
   date: timestamp("date").notNull(),
   fromAccountId: text("from_account_id"), // For transfers: source account
   toAccountId: text("to_account_id"), // For transfers: destination account, or regular transaction account
+  // Real Estate specific fields
+  propertyId: integer("property_id"), // When category is "Real Estate"
+  realEstateSubcategory: text("real_estate_subcategory"), // Gas, Electricity, Taxes, etc.
+  // Device specific fields  
+  deviceId: integer("device_id"), // When category is "Device"
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -57,6 +57,7 @@ const defaultSettings: AppSettings = {
     "Education",
     "Travel",
     "Device",
+    "Real Estate",
     "Income",
     "Investment",
   ],
@@ -104,6 +105,8 @@ const defaultSettings: AppSettings = {
     "Education",
     "Travel",
     "Insurance",
+    "Device",
+    "Real Estate",
     "Other Expenses",
   ],
   generalTransferCategories: [
@@ -245,6 +248,18 @@ export default function Settings() {
   };
 
   const removeCategory = (category: string) => {
+    // Protected categories that cannot be deleted
+    const protectedCategories = ["Device", "Real Estate"];
+    
+    if (protectedCategories.includes(category)) {
+      toast({
+        title: "Cannot delete protected category",
+        description: "This category is protected and cannot be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSettings(prev => ({
       ...prev,
       [activeTab]: prev[activeTab].filter(c => c !== category)
@@ -343,6 +358,18 @@ export default function Settings() {
 
   // Functions to remove categories by type
   const removeIncomeCategory = (category: string) => {
+    // Protected categories that cannot be deleted
+    const protectedCategories = ["Device", "Real Estate"];
+    
+    if (protectedCategories.includes(category)) {
+      toast({
+        title: "Cannot delete protected category",
+        description: "This category is protected and cannot be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     let categoryKey = "";
     if (activeTab === "generalCategories") categoryKey = "generalIncomeCategories";
     else if (activeTab === "realEstateCategories") categoryKey = "realEstateIncomeCategories";
@@ -355,6 +382,18 @@ export default function Settings() {
   };
 
   const removeExpenseCategory = (category: string) => {
+    // Protected categories that cannot be deleted
+    const protectedCategories = ["Device", "Real Estate"];
+    
+    if (protectedCategories.includes(category)) {
+      toast({
+        title: "Cannot delete protected category",
+        description: "This category is protected and cannot be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     let categoryKey = "";
     if (activeTab === "generalCategories") categoryKey = "generalExpenseCategories";
     else if (activeTab === "realEstateCategories") categoryKey = "realEstateExpenseCategories";
@@ -367,6 +406,18 @@ export default function Settings() {
   };
 
   const removeTransferCategory = (category: string) => {
+    // Protected categories that cannot be deleted
+    const protectedCategories = ["Device", "Real Estate"];
+    
+    if (protectedCategories.includes(category)) {
+      toast({
+        title: "Cannot delete protected category",
+        description: "This category is protected and cannot be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSettings(prev => ({
       ...prev,
       generalTransferCategories: prev.generalTransferCategories.filter(c => c !== category)
