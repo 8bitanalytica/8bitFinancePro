@@ -204,6 +204,8 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [conversionError, setConversionError] = useState<string | null>(null);
+  const [manualConversion, setManualConversion] = useState(false);
+  const [toAmount, setToAmount] = useState("");
 
   // Watch for amount changes to trigger currency conversion
   const watchedAmount = form.watch("amount");
@@ -242,13 +244,26 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       // Validate amount for cross-currency transfers
-      if (values.type === 'transfer' && isCrossCurrencyTransfer && !conversionResult) {
-        toast({
-          title: "Currency conversion required",
-          description: "Please wait for currency conversion to complete before submitting.",
-          variant: "destructive",
-        });
-        return;
+      if (values.type === 'transfer' && isCrossCurrencyTransfer) {
+        if (manualConversion) {
+          // Manual conversion - validate both amounts are provided
+          if (!values.amount || !toAmount || parseFloat(values.amount) <= 0 || parseFloat(toAmount) <= 0) {
+            toast({
+              title: "Invalid amounts",
+              description: "Please enter valid amounts for both source and destination accounts.",
+              variant: "destructive",
+            });
+            return;
+          }
+        } else if (!conversionResult) {
+          // Automatic conversion - wait for conversion to complete
+          toast({
+            title: "Currency conversion required",
+            description: "Please wait for currency conversion to complete before submitting.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       if (isRealEstate) {
@@ -272,8 +287,14 @@ export default function TransactionModal({ transaction, onClose, type, propertie
         let finalDescription = values.description;
         
         // Add conversion info to description for cross-currency transfers
-        if (values.type === 'transfer' && conversionResult) {
-          finalDescription += ` | Exchange: ${formatConversion(conversionResult)}`;
+        if (values.type === 'transfer' && isCrossCurrencyTransfer) {
+          if (manualConversion && toAmount) {
+            // Manual conversion - store both amounts
+            finalDescription += ` | Manual conversion: ${values.amount} ${fromAccount?.currency} → ${toAmount} ${toAccount?.currency}`;
+          } else if (conversionResult) {
+            // Automatic conversion
+            finalDescription += ` | Exchange: ${formatConversion(conversionResult)}`;
+          }
         }
 
         const generalData = {
@@ -332,7 +353,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className={`${isDeviceCategory ? 'sm:max-w-[700px]' : 'sm:max-w-[425px]'} max-h-[80vh] overflow-y-auto`}>
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Transaction" : "Add Transaction"}
@@ -346,179 +367,179 @@ export default function TransactionModal({ transaction, onClose, type, propertie
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Account Selection - First field when no account is pre-selected */}
-            {!isRealEstate && !selectedAccountId && (
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* STEP 1: Transaction Type - Always first */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Transaction Type</h3>
               <FormField
                 control={form.control}
-                name="toAccountId"
+                name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Account</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                    <FormLabel>Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account first" />
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select transaction type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {settings.bankAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.name} ({account.currency})
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="income">💰 Income</SelectItem>
+                        <SelectItem value="expense">💸 Expense</SelectItem>
+                        {!isRealEstate && <SelectItem value="transfer">🔄 Transfer</SelectItem>}
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
+            </div>
 
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="income">Income</SelectItem>
-                      <SelectItem value="expense">Expense</SelectItem>
-                      {!isRealEstate && <SelectItem value="transfer">Transfer</SelectItem>}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Amount ({selectedAccount ? getCurrencySymbol(selectedAccount.currency) : currency.symbol})
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter description"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Account Selection for General Finances - Only show when account is pre-selected or for transfers */}
-            {!isRealEstate && selectedAccountId && (
-              <>
-                {/* Transfer fields */}
-                {isTransfer ? (
-                    /* When in an account context, show the selected account as "From" and dropdown for "To" */
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <FormLabel>From Account</FormLabel>
-                        <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
-                          <div className="flex items-center space-x-3">
-                            <div 
-                              className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                              style={{ backgroundColor: selectedAccount?.color }}
-                            />
-                            <div>
-                              <span className="font-medium text-gray-900">{selectedAccount?.name}</span>
-                              <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
-                            </div>
+            {/* STEP 2: Account Selection based on transaction type */}
+            {isTransfer ? (
+              /* Transfer Account Selection */
+              <div className="bg-blue-50 p-4 rounded-lg space-y-4">
+                <h3 className="text-sm font-semibold text-blue-800 mb-3">Transfer Accounts</h3>
+                
+                {selectedAccountId ? (
+                  /* When coming from specific account - show it as FROM */
+                  <>
+                    <div className="space-y-2">
+                      <FormLabel>From Account</FormLabel>
+                      <div className="flex items-center justify-between p-3 bg-white border border-blue-200 rounded-md">
+                        <div className="flex items-center space-x-3">
+                          <div 
+                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                            style={{ backgroundColor: selectedAccount?.color }}
+                          />
+                          <div>
+                            <span className="font-medium text-gray-900">{selectedAccount?.name}</span>
+                            <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
                           </div>
-                          <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                            Current Account
-                          </span>
                         </div>
+                        <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                          Current Account
+                        </span>
                       </div>
-                      
-                      <FormField
-                        control={form.control}
-                        name="toAccountId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>To Account</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select destination account" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {settings.bankAccounts
-                                  .filter(account => account.id !== selectedAccountId)
-                                  .map((account) => (
-                                  <SelectItem key={account.id} value={account.id}>
-                                    {account.name} ({account.currency})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="toAccountId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>To Account</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                            <FormControl>
+                              <SelectTrigger className="h-12">
+                                <SelectValue placeholder="Select destination account" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {settings.bankAccounts
+                                .filter(account => account.id !== selectedAccountId)
+                                .map((account) => (
+                                <SelectItem key={account.id} value={account.id}>
+                                  {account.name} ({account.currency})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
                 ) : (
-                  /* Regular transaction account field - Account is pre-selected from sidebar */
+                  /* When in All Accounts view - show both dropdowns */
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="fromAccountId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>From Account</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                            <FormControl>
+                              <SelectTrigger className="h-12">
+                                <SelectValue placeholder="Select from account" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {settings.bankAccounts.map((account) => (
+                                <SelectItem key={account.id} value={account.id}>
+                                  {account.name} ({account.currency})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="toAccountId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>To Account</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                            <FormControl>
+                              <SelectTrigger className="h-12">
+                                <SelectValue placeholder="Select to account" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {settings.bankAccounts.map((account) => (
+                                <SelectItem key={account.id} value={account.id}>
+                                  {account.name} ({account.currency})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Income/Expense Account Selection */
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h3 className="text-sm font-semibold text-green-800 mb-3">Account</h3>
+                
+                {!isRealEstate && !selectedAccountId ? (
+                  /* All Accounts view - show dropdown */
+                  <FormField
+                    control={form.control}
+                    name="toAccountId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                          <FormControl>
+                            <SelectTrigger className="h-12">
+                              <SelectValue placeholder="Select account" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {settings.bankAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} ({account.currency})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : (
+                  /* Specific account context - show pre-selected */
                   <div className="space-y-2">
                     <FormLabel>Account</FormLabel>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center justify-between p-3 bg-white border border-green-200 rounded-md">
                       <div className="flex items-center space-x-3">
                         <div 
                           className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
@@ -529,61 +550,251 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                           <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
                         </div>
                       </div>
-                      <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                      <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
                         Pre-selected
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Transaction will be added to this account. Currency: {selectedAccount?.currency}
-                    </p>
                   </div>
                 )}
-              </>
+              </div>
             )}
 
-            {/* Transfer fields for All Accounts view */}
-            {!isRealEstate && !selectedAccountId && isTransfer && (
+            {/* STEP 3: Amount Section */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Amount</h3>
+              
+              {isTransfer && isCrossCurrencyTransfer ? (
+                /* Cross-currency transfer - show manual conversion option */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="text-sm font-medium text-gray-700">Conversion Method</label>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        variant={!manualConversion ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setManualConversion(false)}
+                      >
+                        Auto Convert
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={manualConversion ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setManualConversion(true)}
+                      >
+                        Manual Convert
+                      </Button>
+                    </div>
+                  </div>
+
+                  {manualConversion ? (
+                    /* Manual conversion - two separate amount fields */
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Amount From ({fromAccount?.currency}) {getCurrencySymbol(fromAccount?.currency || '')}
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div>
+                        <FormLabel>
+                          Amount To ({toAccount?.currency}) {getCurrencySymbol(toAccount?.currency || '')}
+                        </FormLabel>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={toAmount}
+                          onChange={(e) => setToAmount(e.target.value)}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Enter the exact amount to be deposited
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Automatic conversion - single amount field */
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Amount ({fromAccount?.currency}) {getCurrencySymbol(fromAccount?.currency || '')}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                          <p className="text-xs text-gray-500">
+                            Amount will be automatically converted to {toAccount?.currency}
+                          </p>
+                          
+                          {/* Live Conversion Display */}
+                          {isConverting && (
+                            <div className="flex items-center gap-2 text-blue-600 text-sm">
+                              <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                              Converting...
+                            </div>
+                          )}
+                          {conversionError && (
+                            <div className="text-red-600 text-xs">
+                              Conversion error: {conversionError}
+                            </div>
+                          )}
+                          {conversionResult && !isConverting && (
+                            <div className="text-sm text-green-700">
+                              → {getCurrencySymbol(toAccount?.currency || '')}{conversionResult.convertedAmount} 
+                              <span className="text-gray-500 ml-1">(Rate: {conversionResult.exchangeRate.toFixed(4)})</span>
+                            </div>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              ) : (
+                /* Regular amount field for non-cross-currency transactions */
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Amount ({selectedAccount ? getCurrencySymbol(selectedAccount.currency) : 
+                          fromAccount ? getCurrencySymbol(fromAccount.currency) : 
+                          currency.symbol})
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
+            {/* STEP 4: Transaction Details */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Transaction Details</h3>
+              
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter description"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Date and Time */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="fromAccountId"
+                  name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>From Account</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select from account" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {settings.bankAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name} ({account.currency})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="toAccountId"
+                  name="time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>To Account</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                      <FormLabel>Time</FormLabel>
+                      <FormControl>
+                        <Input type="time" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Property Selection for Real Estate */}
+              {isRealEstate && (
+                <FormField
+                  control={form.control}
+                  name="propertyId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Property</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select to account" />
+                            <SelectValue placeholder="Select property" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {settings.bankAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name} ({account.currency})
+                          {properties.map((property) => (
+                            <SelectItem key={property.id} value={property.id.toString()}>
+                              {property.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -592,45 +803,10 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                     </FormItem>
                   )}
                 />
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Currency Conversion Display for Cross-Currency Transfers */}
-            {isCrossCurrencyTransfer && (
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <h4 className="font-medium text-blue-900 mb-2">Currency Conversion</h4>
-                {isConverting ? (
-                  <div className="flex items-center gap-2 text-blue-700">
-                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    <span>Converting currency...</span>
-                  </div>
-                ) : conversionError ? (
-                  <div className="text-red-600 text-sm">
-                    <strong>Error:</strong> {conversionError}
-                  </div>
-                ) : conversionResult ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-700">From ({fromAccount?.currency}):</span>
-                      <span className="font-medium">{getCurrencySymbol(fromAccount?.currency || '')}{conversionResult.originalAmount}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-700">To ({toAccount?.currency}):</span>
-                      <span className="font-medium text-green-700">{getCurrencySymbol(toAccount?.currency || '')}{conversionResult.convertedAmount}</span>
-                    </div>
-                    <div className="text-xs text-blue-600 pt-1 border-t border-blue-200">
-                      Exchange rate: 1 {fromAccount?.currency} = {conversionResult.exchangeRate.toFixed(4)} {toAccount?.currency}
-                      <br />
-                      Rate updated: {new Date(conversionResult.date).toLocaleString()}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-blue-600">
-                    Enter an amount to see the live conversion from {fromAccount?.currency} to {toAccount?.currency}
-                  </div>
-                )}
-              </div>
-            )}
+
 
             {/* Device-specific fields when category is 'Device' */}
             {isDeviceCategory && (
