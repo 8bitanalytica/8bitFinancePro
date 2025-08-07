@@ -16,6 +16,7 @@ import { useAppSettings } from "@/components/settings/settings";
 import { useCurrency } from "@/lib/currency";
 import { convertCurrency, formatConversion, type ConversionResult } from "@/lib/currency-converter";
 import type { GeneralTransaction, RealEstateTransaction, Property } from "@shared/schema";
+import { ReceiptUploader } from "@/components/upload/ReceiptUploader";
 
 interface TransactionModalProps {
   transaction?: GeneralTransaction | RealEstateTransaction;
@@ -194,6 +195,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       deviceStatus: "active",
       deviceReceiptImage: "",
       deviceImage: "",
+      receiptUrl: ('receiptUrl' in transaction ? transaction.receiptUrl : "") || "",
     } : {
       type: "expense",
       amount: "",
@@ -224,6 +226,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
       deviceStatus: "active",
       deviceReceiptImage: "",
       deviceImage: "",
+      receiptUrl: "",
     },
   });
 
@@ -832,6 +835,20 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                   )}
                 />
               </div>
+
+              {/* Receipt Upload - For expense transactions only */}
+              {(watchedType === "expense" || isRealEstate) && (
+                <ReceiptUploader
+                  currentReceiptUrl={form.watch("receiptUrl") || ""}
+                  onUploadComplete={(receiptUrl) => {
+                    form.setValue("receiptUrl", receiptUrl);
+                  }}
+                  onRemoveReceipt={() => {
+                    form.setValue("receiptUrl", "");
+                  }}
+                  disabled={form.formState.isSubmitting}
+                />
+              )}
 
               {/* Real Estate specific fields when category is 'Real Estate' */}
               {isRealEstateCategory && (

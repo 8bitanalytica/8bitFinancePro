@@ -752,6 +752,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Receipt upload endpoint
+  app.post('/api/receipts/upload', async (req, res) => {
+    try {
+      // Generate a unique upload URL for receipts
+      const receiptId = `receipt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const uploadURL = `https://storage.googleapis.com/receipts/${receiptId}`;
+      
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error('Error generating receipt upload URL:', error);
+      res.status(500).json({ error: 'Failed to generate upload URL' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

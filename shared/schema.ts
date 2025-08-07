@@ -17,6 +17,8 @@ export const generalTransactions = pgTable("general_transactions", {
   realEstateSubcategory: text("real_estate_subcategory"), // Gas, Electricity, Taxes, etc.
   // Device specific fields  
   deviceId: integer("device_id"), // When category is "Device"
+  // Receipt upload field
+  receiptUrl: text("receipt_url"), // URL per la ricevuta caricata (PDF o JPEG)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -39,6 +41,7 @@ export const realEstateTransactions = pgTable("real_estate_transactions", {
   description: text("description").notNull(),
   category: text("category").notNull(), // "rent", "maintenance", "repairs", "taxes", "insurance"
   date: timestamp("date").notNull(),
+  receiptUrl: text("receipt_url"), // URL per la ricevuta caricata (PDF o JPEG)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -73,6 +76,7 @@ export const deviceTransactions = pgTable("device_transactions", {
   description: text("description").notNull(),
   category: text("category").notNull(), // "repair", "upgrade", "accessory", "maintenance", "insurance"
   date: timestamp("date").notNull(),
+  receiptUrl: text("receipt_url"), // URL per la ricevuta caricata (PDF o JPEG)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -84,6 +88,7 @@ export const insertGeneralTransactionSchema = createInsertSchema(generalTransact
   date: z.string().or(z.date()).transform((val) => 
     typeof val === 'string' ? new Date(val) : val
   ),
+  receiptUrl: z.string().optional(),
 });
 
 export const insertPropertySchema = createInsertSchema(properties).omit({
@@ -98,6 +103,7 @@ export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTr
   date: z.string().or(z.date()).transform((val) => 
     typeof val === 'string' ? new Date(val) : val
   ),
+  receiptUrl: z.string().optional(),
 });
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
@@ -112,6 +118,7 @@ export const insertDeviceTransactionSchema = createInsertSchema(deviceTransactio
   date: z.string().or(z.date()).transform((val) => 
     typeof val === 'string' ? new Date(val) : val
   ),
+  receiptUrl: z.string().optional(),
 });
 
 // Types
