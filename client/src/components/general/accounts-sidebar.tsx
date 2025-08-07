@@ -170,7 +170,7 @@ export default function AccountsSidebar({
         <Card className="cursor-pointer transition-all hover:shadow-md hover:bg-white">
           <CardContent 
             className="p-4"
-            onClick={() => setLocation('/')}
+            onClick={() => onAccountSelect(null)}
           >
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-full bg-blue-100">
