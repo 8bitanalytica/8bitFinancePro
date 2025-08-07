@@ -36,13 +36,13 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const { data: propertiesList = [] } = useQuery({
     queryKey: ['/api/properties'],
     enabled: !isRealEstate, // Only fetch when in general finances
-  });
+  }) as { data: Array<{ id: number; name: string; address: string }> };
 
   // Fetch devices for Device category
   const { data: devicesList = [] } = useQuery({
     queryKey: ['/api/devices'],
     enabled: !isRealEstate, // Only fetch when in general finances
-  });
+  }) as { data: Array<{ id: number; name: string; brand: string; model: string }> };
 
   const getCurrencySymbol = (code: string) => {
     const currencies = {
@@ -52,27 +52,8 @@ export default function TransactionModal({ transaction, onClose, type, propertie
     return currencies[code as keyof typeof currencies] || code;
   };
 
-  // Get categories based on transaction type and module
-  const getCategories = () => {
-    if (isRealEstate) {
-      return settings.realEstateCategories || [];
-    }
-    
-    // For general finances, use the appropriate categorized lists
-    const watchedType = form.watch("type");
-    if (watchedType === "income") {
-      return settings.generalIncomeCategories || [];
-    } else if (watchedType === "expense") {
-      return settings.generalExpenseCategories || [];
-    } else if (watchedType === "transfer") {
-      return settings.generalTransferCategories || [];
-    }
-    
-    // Fallback to legacy categories
-    return settings.generalCategories || [];
-  };
-
-  const categories = getCategories();
+  // For now, use general categories until form is initialized
+  const categories = isRealEstate ? settings.realEstateCategories : settings.generalCategories;
 
   // Real Estate subcategories
   const realEstateSubcategories = [
@@ -252,6 +233,27 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   const isDeviceCategory = watchedCategory === "Device";
   const isRealEstateCategory = watchedCategory === "Real Estate";
   const isTransfer = watchedType === "transfer";
+
+  // Get categories based on transaction type and module
+  const getCategories = () => {
+    if (isRealEstate) {
+      return settings.realEstateCategories || [];
+    }
+    
+    // For general finances, use the appropriate categorized lists
+    if (watchedType === "income") {
+      return settings.generalIncomeCategories || [];
+    } else if (watchedType === "expense") {
+      return settings.generalExpenseCategories || [];
+    } else if (watchedType === "transfer") {
+      return settings.generalTransferCategories || [];
+    }
+    
+    // Fallback to legacy categories
+    return settings.generalCategories || [];
+  };
+
+  const dynamicCategories = getCategories();
 
   // When there's a selectedAccountId, get that account info
   // Otherwise use the account from the form
@@ -789,7 +791,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((category) => (
+                        {dynamicCategories.map((category) => (
                           <SelectItem key={category} value={category}>
                             {category}
                           </SelectItem>
