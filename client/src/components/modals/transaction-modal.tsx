@@ -64,7 +64,6 @@ export default function TransactionModal({ transaction, onClose, type, propertie
     intervalCount: 1,
     startDate: new Date().toISOString().split('T')[0],
     endDate: undefined as string | undefined,
-    totalOccurrences: undefined as number | undefined,
   });
 
   // Real Estate subcategories
@@ -437,7 +436,6 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               intervalCount: recurringData.intervalCount,
               startDate: new Date(recurringData.startDate),
               endDate: recurringData.endDate ? new Date(recurringData.endDate) : null,
-              totalOccurrences: recurringData.totalOccurrences || null,
               accountId: (values as any).toAccountId,
               isActive: true,
             };
@@ -892,19 +890,6 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Total Occurrences (Optional)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={recurringData.totalOccurrences || ""}
-                          onChange={(e) => setRecurringData(prev => ({ ...prev, totalOccurrences: e.target.value ? parseInt(e.target.value) : undefined }))}
-                          placeholder="Leave empty for infinite"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        />
-                      </div>
                     </div>
 
                     <div className="text-xs text-purple-600 bg-purple-100 p-2 rounded">
@@ -991,12 +976,12 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               {/* Receipt Upload - For expense transactions only */}
               {(watchedType === "expense" || isRealEstate) && (
                 <ReceiptUploader
-                  currentReceiptUrl={form.watch("receiptUrl") || ""}
+                  currentReceiptUrl={form.watch("receiptUrl" as any) || ""}
                   onUploadComplete={(receiptUrl) => {
-                    form.setValue("receiptUrl", receiptUrl);
+                    form.setValue("receiptUrl" as any, receiptUrl);
                   }}
                   onRemoveReceipt={() => {
-                    form.setValue("receiptUrl", "");
+                    form.setValue("receiptUrl" as any, "");
                   }}
                   disabled={form.formState.isSubmitting}
                 />

@@ -153,7 +153,6 @@ export const recurringTransactions = pgTable("recurring_transactions", {
   nextDueDate: date("next_due_date").notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   lastProcessedDate: timestamp("last_processed_date"),
-  totalOccurrences: integer("total_occurrences"), // null means infinite
   currentOccurrence: integer("current_occurrence").default(0).notNull(),
   module: text("module").default("general").notNull(), // general, real-estate, devices
   propertyId: integer("property_id").references(() => properties.id, { onDelete: "cascade" }),
