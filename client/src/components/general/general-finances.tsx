@@ -327,21 +327,7 @@ export default function GeneralFinances() {
             ) : (
               // All accounts view - Dashboard with multi-currency statistics and recent transactions
               <div className="space-y-8">
-                {/* Dashboard Header */}
-                <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Dashboard</h3>
-                    <p className="text-sm text-gray-600 mt-1">Overview of all your accounts and recent activity</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Button onClick={() => setShowModal(true)}>
-                      Add Transaction
-                    </Button>
-                    <div className="text-sm text-gray-500">
-                      Last 30 days • {displayedTransactions.length} transactions
-                    </div>
-                  </div>
-                </div>
+                
 
                 {/* Multi-Currency Statistics */}
                 <div className="space-y-6">

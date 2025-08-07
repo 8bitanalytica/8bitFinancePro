@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Plus, Eye, RefreshCw } from "lucide-react";
+import { CreditCard, Plus, Eye } from "lucide-react";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -93,11 +93,6 @@ export default function AccountsSidebar({
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">Accounts</h3>
           <div className="flex gap-2">
-            {onRefresh && (
-              <Button onClick={onRefresh} size="sm" variant="outline" className="p-2">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
             <Button onClick={onAddTransaction} size="sm" className="bg-primary hover:bg-blue-700">
               Add Transaction
             </Button>
