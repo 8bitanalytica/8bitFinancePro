@@ -132,7 +132,7 @@ export default function DeviceFinances() {
 
   const handleDuplicateTransaction = (transaction: DeviceTransaction) => {
     const now = new Date();
-    const duplicatedTransaction: Partial<DeviceTransaction> = {
+    const duplicatedTransaction = {
       deviceId: transaction.deviceId,
       type: transaction.type,
       amount: transaction.amount,
@@ -140,6 +140,7 @@ export default function DeviceFinances() {
       category: transaction.category,
       date: now,
     };
+    // Don't set an ID so it's treated as a new transaction  
     setEditingTransaction(duplicatedTransaction as DeviceTransaction);
     setShowTransactionModal(true);
   };

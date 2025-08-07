@@ -148,7 +148,7 @@ export default function GeneralFinances() {
 
   const handleDuplicateTransaction = (transaction: GeneralTransaction) => {
     const now = new Date();
-    const duplicatedTransaction: Partial<GeneralTransaction> = {
+    const duplicatedTransaction = {
       type: transaction.type,
       amount: transaction.amount,
       description: `${transaction.description} (Copy)`,
@@ -157,6 +157,7 @@ export default function GeneralFinances() {
       toAccountId: transaction.toAccountId,
       fromAccountId: transaction.fromAccountId,
     };
+    // Don't set an ID so it's treated as a new transaction
     setEditingTransaction(duplicatedTransaction as GeneralTransaction);
     setShowModal(true);
   };

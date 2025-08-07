@@ -159,7 +159,7 @@ export default function RealEstateFinances() {
 
   const handleDuplicateTransaction = (transaction: RealEstateTransaction) => {
     const now = new Date();
-    const duplicatedTransaction: Partial<RealEstateTransaction> = {
+    const duplicatedTransaction = {
       propertyId: transaction.propertyId,
       projectId: transaction.projectId,
       type: transaction.type,
@@ -168,6 +168,7 @@ export default function RealEstateFinances() {
       category: transaction.category,
       date: now,
     };
+    // Don't set an ID so it's treated as a new transaction
     setEditingTransaction(duplicatedTransaction as RealEstateTransaction);
     setShowTransactionModal(true);
   };
