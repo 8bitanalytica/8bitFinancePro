@@ -143,12 +143,10 @@ export default function DeviceFinances() {
         receiptUrl: null,
       };
       
-      console.log('Duplicating transaction:', duplicatedTransaction);
       await deviceTransactionsApi.create(duplicatedTransaction);
       toast({ title: "Transaction duplicated successfully" });
       refetchTransactions();
     } catch (error) {
-      console.error('Duplication error:', error);
       toast({
         title: "Error",
         description: "Failed to duplicate transaction",

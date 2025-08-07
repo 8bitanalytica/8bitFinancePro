@@ -160,12 +160,10 @@ export default function GeneralFinances() {
         receiptUrl: null,
       };
       
-      console.log('Duplicating transaction:', duplicatedTransaction);
       await generalTransactionsApi.create(duplicatedTransaction);
       toast({ title: "Transaction duplicated successfully" });
-      refetchTransactions();
+      refetch();
     } catch (error) {
-      console.error('Duplication error:', error);
       toast({
         title: "Error",
         description: "Failed to duplicate transaction",

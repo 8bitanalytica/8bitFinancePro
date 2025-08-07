@@ -171,12 +171,10 @@ export default function RealEstateFinances() {
         receiptUrl: null,
       };
       
-      console.log('Duplicating transaction:', duplicatedTransaction);
       await realEstateTransactionsApi.create(duplicatedTransaction);
       toast({ title: "Transaction duplicated successfully" });
       refetchTransactions();
     } catch (error) {
-      console.error('Duplication error:', error);
       toast({
         title: "Error",
         description: "Failed to duplicate transaction",
