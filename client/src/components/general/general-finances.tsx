@@ -233,7 +233,7 @@ export default function GeneralFinances() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex min-h-full">
       {/* Accounts Sidebar */}
       <AccountsSidebar
         selectedAccountId={selectedAccountId}
@@ -248,7 +248,7 @@ export default function GeneralFinances() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto">
+        <div className="min-h-full overflow-y-auto">
           <div className="p-6 space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">

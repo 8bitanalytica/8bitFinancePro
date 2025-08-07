@@ -195,7 +195,7 @@ export default function AccountsSidebar({
   };
 
   return (
-    <div className="w-80 bg-gray-50 border-r border-gray-200 h-screen overflow-y-auto">
+    <div className="w-80 bg-gray-50 border-r border-gray-200 min-h-screen overflow-y-auto">
       <div className="p-4 space-y-4">
         {/* Dashboard Menu Item */}
         <Card className="cursor-pointer transition-all hover:shadow-md hover:bg-white">
