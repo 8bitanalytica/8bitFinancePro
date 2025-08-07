@@ -27,31 +27,31 @@ export default function TopNavigation() {
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex items-center justify-between h-16 relative">
+          {/* Logo/Title */}
           <div className={cn(
-            "flex",
-            settings.menuPosition === "center" && "flex-1 justify-center",
-            settings.menuPosition === "right" && "flex-1 justify-end"
+            "flex items-center",
+            settings.logoPosition === "left" && "order-1",
+            settings.logoPosition === "center" && "order-2 absolute left-1/2 transform -translate-x-1/2",
+            settings.logoPosition === "right" && "order-3"
           )}>
-            {/* Logo */}
-            <div className="flex-shrink-0 flex items-center">
-              {settings.appLogo && (
-                <img 
-                  src={settings.appLogo} 
-                  alt="App Logo" 
-                  className="h-8 w-8 object-cover rounded mr-3"
-                />
-              )}
-              <h1 className="text-xl font-bold text-gray-900">{settings.appName}</h1>
-            </div>
+            {settings.appLogo && (
+              <img 
+                src={settings.appLogo} 
+                alt="App Logo" 
+                className="h-8 w-8 object-cover rounded mr-3"
+              />
+            )}
+            <h1 className="text-xl font-bold text-gray-900">{settings.appName}</h1>
+          </div>
 
-            {/* Desktop Navigation */}
-            <div className={cn(
-              "hidden sm:flex sm:space-x-8",
-              settings.menuPosition === "left" && "sm:ml-8",
-              settings.menuPosition === "center" && "sm:ml-8",
-              settings.menuPosition === "right" && "sm:mr-8"
-            )}>
+          {/* Desktop Navigation */}
+          <div className={cn(
+            "hidden sm:flex sm:space-x-8",
+            settings.menuPosition === "left" && "order-1",
+            settings.menuPosition === "center" && "order-2 absolute left-1/2 transform -translate-x-1/2",
+            settings.menuPosition === "right" && "order-3"
+          )}>
               {navigation.map((item) => {
                 const isActive = location === item.href;
                 return (
@@ -71,10 +71,12 @@ export default function TopNavigation() {
                 );
               })}
             </div>
-          </div>
+
+          {/* Spacer for layout balance */}
+          <div className="order-1 sm:order-none"></div>
 
           {/* Mobile menu button */}
-          <div className="flex items-center sm:hidden">
+          <div className="flex items-center sm:hidden order-4">
             <Button
               variant="ghost"
               size="sm"

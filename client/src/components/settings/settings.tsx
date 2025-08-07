@@ -25,6 +25,7 @@ interface AppSettings {
   // App Customization
   appName: string;
   appLogo?: string;
+  logoPosition: "left" | "center" | "right";
   menuPosition: "left" | "center" | "right";
   // Categories
   generalCategories: string[];
@@ -71,6 +72,7 @@ const defaultSettings: AppSettings = {
   // App Customization
   appName: "Financial Manager",
   appLogo: undefined,
+  logoPosition: "left",
   menuPosition: "center",
   // Legacy categories (for backward compatibility)
   generalCategories: [
@@ -681,6 +683,27 @@ npm run build && npm start # production`;
                 </div>
               </div>
               <p className="text-xs text-gray-500">Upload an image or enter a URL for your application logo</p>
+            </div>
+
+            {/* Logo Position */}
+            <div className="space-y-2">
+              <Label>Logo/Title Position</Label>
+              <Select 
+                value={settings.logoPosition} 
+                onValueChange={(value: "left" | "center" | "right") => 
+                  setSettings(prev => ({ ...prev, logoPosition: value }))
+                }
+              >
+                <SelectTrigger className="max-w-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left Aligned</SelectItem>
+                  <SelectItem value="center">Center Aligned</SelectItem>
+                  <SelectItem value="right">Right Aligned</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">Choose where the logo and app name are positioned in the top bar</p>
             </div>
 
             {/* Menu Position */}
