@@ -225,6 +225,7 @@ export default function Settings() {
   const [copiedCommands, setCopiedCommands] = useState(false);
   const [showBankConnectionModal, setShowBankConnectionModal] = useState(false);
   const [selectedAccountForConnection, setSelectedAccountForConnection] = useState<string | null>(null);
+  const [logoFileInput, setLogoFileInput] = useState<HTMLInputElement | null>(null);
   const [bankForm, setBankForm] = useState({
     name: "",
     type: "checking" as BankAccount["type"],
@@ -567,6 +568,25 @@ export default function Settings() {
     return currencies.find(c => c.code === code)?.symbol || code;
   };
 
+  const handleLogoUpload = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          setSettings(prev => ({ ...prev, appLogo: result }));
+          toast({ title: "Logo uploaded successfully!" });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  };
+
   const copyInstallationCommands = async () => {
     const commands = `# Installa Node.js 20
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -676,7 +696,12 @@ npm run build && npm start # production`;
                     placeholder="Enter logo URL or upload image"
                     className="max-w-md"
                   />
-                  <Button variant="outline" size="sm" className="max-w-fit">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="max-w-fit"
+                    onClick={handleLogoUpload}
+                  >
                     <Upload className="h-4 w-4 mr-2" />
                     Upload Image
                   </Button>
