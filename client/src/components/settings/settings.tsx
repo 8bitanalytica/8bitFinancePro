@@ -219,13 +219,19 @@ export default function Settings() {
     };
 
     if (editingBank) {
-      setSettings(prev => ({
-        ...prev,
-        bankAccounts: prev.bankAccounts.map(acc => 
+      const updatedSettings = {
+        ...settings,
+        bankAccounts: settings.bankAccounts.map(acc => 
           acc.id === editingBank.id ? newAccount : acc
         ),
-      }));
+      };
+      setSettings(updatedSettings);
+      localStorage.setItem("appSettings", JSON.stringify(updatedSettings));
       toast({ title: "Bank account updated successfully" });
+      
+      // Notify other components that accounts have been updated
+      window.dispatchEvent(new CustomEvent('accountsUpdated'));
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     } else {
       setSettings(prev => ({
         ...prev,
@@ -233,8 +239,15 @@ export default function Settings() {
       }));
       toast({ title: "Bank account created successfully" });
       
+      // Save to localStorage immediately
+      localStorage.setItem("appSettings", JSON.stringify({
+        ...settings,
+        bankAccounts: [...settings.bankAccounts, newAccount],
+      }));
+      
       // Notify other components that accounts have been updated
       window.dispatchEvent(new CustomEvent('accountsUpdated'));
+      window.dispatchEvent(new CustomEvent('settingsChanged'));
     }
 
     setShowBankModal(false);
@@ -242,10 +255,17 @@ export default function Settings() {
   };
 
   const deleteBankAccount = (id: string) => {
-    setSettings(prev => ({
-      ...prev,
-      bankAccounts: prev.bankAccounts.filter(acc => acc.id !== id),
-    }));
+    const updatedSettings = {
+      ...settings,
+      bankAccounts: settings.bankAccounts.filter(acc => acc.id !== id),
+    };
+    setSettings(updatedSettings);
+    localStorage.setItem("appSettings", JSON.stringify(updatedSettings));
+    
+    // Notify other components that accounts have been updated
+    window.dispatchEvent(new CustomEvent('accountsUpdated'));
+    window.dispatchEvent(new CustomEvent('settingsChanged'));
+    
     toast({ title: "Bank account deleted successfully" });
   };
 
@@ -798,8 +818,9 @@ npm run build && npm start # production`;
 // Hook to use settings throughout the app
 export function useAppSettings() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
+  const loadSettings = () => {
     const savedSettings = localStorage.getItem("appSettings");
     if (savedSettings) {
       try {
@@ -809,6 +830,29 @@ export function useAppSettings() {
         console.error("Error parsing saved settings:", error);
       }
     }
+  };
+
+  useEffect(() => {
+    loadSettings();
+  }, [refreshKey]);
+
+  // Listen for custom events to reload settings
+  useEffect(() => {
+    const handleAccountsUpdated = () => {
+      setRefreshKey(prev => prev + 1);
+    };
+    
+    const handleSettingsChanged = () => {
+      loadSettings();
+    };
+    
+    window.addEventListener('accountsUpdated', handleAccountsUpdated);
+    window.addEventListener('settingsChanged', handleSettingsChanged);
+    
+    return () => {
+      window.removeEventListener('accountsUpdated', handleAccountsUpdated);
+      window.removeEventListener('settingsChanged', handleSettingsChanged);
+    };
   }, []);
 
   return settings;

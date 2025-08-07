@@ -23,19 +23,35 @@ export default function AccountsSidebar({
   onAddTransaction,
   onRefresh
 }: AccountsSidebarProps) {
-  const settings = useAppSettings();
   const [, setLocation] = useLocation();
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Get fresh settings on every render and when refreshKey changes
+  const settings = useAppSettings();
 
   // Listen for account updates from settings
   useEffect(() => {
     const handleAccountsUpdated = () => {
       setRefreshKey(prev => prev + 1);
+      // Force a complete re-render by triggering state change
+      setTimeout(() => setRefreshKey(prev => prev + 1), 100);
     };
     
     window.addEventListener('accountsUpdated', handleAccountsUpdated);
     return () => window.removeEventListener('accountsUpdated', handleAccountsUpdated);
   }, []);
+
+  // Force refresh when refreshKey changes
+  useEffect(() => {
+    if (refreshKey > 0) {
+      // Settings should be re-read from localStorage
+      const savedSettings = localStorage.getItem("appSettings");
+      if (savedSettings) {
+        // This will trigger a re-render
+        window.dispatchEvent(new CustomEvent('settingsChanged'));
+      }
+    }
+  }, [refreshKey]);
 
   const calculateAccountBalance = (accountId: string) => {
     const accountTransactions = transactions.filter(transaction => {
