@@ -41,6 +41,10 @@ The application implements a per-account currency system where:
 - Transaction amounts are displayed using the currency of the associated account
 - Transfer transactions show amounts in the respective account currencies
 - Global currency setting remains for backward compatibility and as default for new accounts
+- **Automatic Currency Conversion**: Transfer transactions between accounts with different currencies automatically fetch real-time exchange rates
+- **Exchange Rate API**: Uses ExchangeRate.host API for live currency conversion without requiring API keys
+- **Conversion Display**: Shows original amount, converted amount, exchange rate, and timestamp in transfer modals
+- **Transaction History**: Exchange rate information is automatically saved in transaction descriptions for future reference
 
 ### Settings System
 The application includes a comprehensive settings system with:

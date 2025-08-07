@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +13,7 @@ import { insertGeneralTransactionSchema, insertRealEstateTransactionSchema, inse
 import { useToast } from "@/hooks/use-toast";
 import { useAppSettings } from "@/components/settings/settings";
 import { useCurrency } from "@/lib/currency";
+import { convertCurrency, formatConversion, type ConversionResult } from "@/lib/currency-converter";
 import type { GeneralTransaction, RealEstateTransaction, Property } from "@shared/schema";
 
 interface TransactionModalProps {
@@ -173,8 +175,69 @@ export default function TransactionModal({ transaction, onClose, type, propertie
     ? settings.bankAccounts.find(acc => acc.id === watchedToAccountId)
     : null;
 
+  const watchedFromAccountId = form.watch("fromAccountId");
+  const fromAccount = watchedFromAccountId 
+    ? settings.bankAccounts.find(acc => acc.id === watchedFromAccountId)
+    : null;
+  const toAccount = watchedToAccountId 
+    ? settings.bankAccounts.find(acc => acc.id === watchedToAccountId)
+    : null;
+
+  // Check if this is a cross-currency transfer
+  const isCrossCurrencyTransfer = isTransfer && fromAccount && toAccount && 
+    fromAccount.currency !== toAccount.currency;
+
+  // State for currency conversion
+  const [conversionResult, setConversionResult] = useState<ConversionResult | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
+  const [conversionError, setConversionError] = useState<string | null>(null);
+
+  // Watch for amount changes to trigger currency conversion
+  const watchedAmount = form.watch("amount");
+
+  // Auto-convert currency when amount, from account, or to account changes for cross-currency transfers
+  useEffect(() => {
+    if (isCrossCurrencyTransfer && watchedAmount && parseFloat(watchedAmount) > 0) {
+      handleCurrencyConversion();
+    } else {
+      setConversionResult(null);
+      setConversionError(null);
+    }
+  }, [watchedAmount, watchedFromAccountId, watchedToAccountId, isCrossCurrencyTransfer]);
+
+  const handleCurrencyConversion = async () => {
+    if (!fromAccount || !toAccount || !watchedAmount) return;
+
+    setIsConverting(true);
+    setConversionError(null);
+
+    try {
+      const result = await convertCurrency(
+        parseFloat(watchedAmount),
+        fromAccount.currency,
+        toAccount.currency
+      );
+      setConversionResult(result);
+    } catch (error) {
+      setConversionError(error instanceof Error ? error.message : 'Conversion failed');
+      setConversionResult(null);
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      // Validate amount for cross-currency transfers
+      if (values.type === 'transfer' && isCrossCurrencyTransfer && !conversionResult) {
+        toast({
+          title: "Currency conversion required",
+          description: "Please wait for currency conversion to complete before submitting.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (isRealEstate) {
         const realEstateData = {
           type: values.type,
@@ -193,10 +256,17 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           toast({ title: "Transaction created successfully" });
         }
       } else {
+        let finalDescription = values.description;
+        
+        // Add conversion info to description for cross-currency transfers
+        if (values.type === 'transfer' && conversionResult) {
+          finalDescription += ` | Exchange: ${formatConversion(conversionResult)}`;
+        }
+
         const generalData = {
           type: values.type,
           amount: values.amount,
-          description: values.description,
+          description: finalDescription,
           category: values.category,
           date: new Date(`${values.date}T${values.time}:00`),
           fromAccountId: (values as any).fromAccountId || null,
@@ -427,6 +497,43 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                   />
                 )}
               </>
+            )}
+
+            {/* Currency Conversion Display for Cross-Currency Transfers */}
+            {isCrossCurrencyTransfer && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-2">Currency Conversion</h4>
+                {isConverting ? (
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Converting currency...</span>
+                  </div>
+                ) : conversionError ? (
+                  <div className="text-red-600 text-sm">
+                    <strong>Error:</strong> {conversionError}
+                  </div>
+                ) : conversionResult ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-blue-700">From ({fromAccount?.currency}):</span>
+                      <span className="font-medium">{getCurrencySymbol(fromAccount?.currency || '')}{conversionResult.originalAmount}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-blue-700">To ({toAccount?.currency}):</span>
+                      <span className="font-medium text-green-700">{getCurrencySymbol(toAccount?.currency || '')}{conversionResult.convertedAmount}</span>
+                    </div>
+                    <div className="text-xs text-blue-600 pt-1 border-t border-blue-200">
+                      Exchange rate: 1 {fromAccount?.currency} = {conversionResult.exchangeRate.toFixed(4)} {toAccount?.currency}
+                      <br />
+                      Rate updated: {new Date(conversionResult.date).toLocaleString()}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-blue-600">
+                    Enter an amount to see the live conversion from {fromAccount?.currency} to {toAccount?.currency}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Device-specific fields when category is 'Device' */}
