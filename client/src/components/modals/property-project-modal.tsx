@@ -65,9 +65,9 @@ export default function PropertyProjectModal({
     if (project) {
       form.reset({
         name: project.name,
-        description: project.description || "",
+        description: project.description ?? "",
         status: project.status,
-        budget: project.budget || "",
+        budget: project.budget ?? "",
         startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : "",
         endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : "",
         propertyId: project.propertyId || undefined,
@@ -128,10 +128,13 @@ export default function PropertyProjectModal({
     setIsLoading(true);
     try {
       const formattedData = {
-        ...data,
-        budget: data.budget ? parseFloat(data.budget) : undefined,
+        name: data.name,
+        description: data.description || null,
+        status: data.status,
+        propertyId: data.propertyId || null,
+        budget: data.budget ? data.budget : null,
         startDate: new Date(data.startDate),
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
+        endDate: data.endDate ? new Date(data.endDate) : null,
       };
 
       if (project) {
@@ -206,7 +209,8 @@ export default function PropertyProjectModal({
                     <Textarea 
                       placeholder="Project description and details..." 
                       rows={3}
-                      {...field} 
+                      {...field}
+                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -250,6 +254,7 @@ export default function PropertyProjectModal({
                         step="0.01"
                         placeholder="0.00"
                         {...field}
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                     <FormMessage />
