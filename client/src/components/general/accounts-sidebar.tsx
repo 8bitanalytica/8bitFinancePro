@@ -4,6 +4,7 @@ import { CreditCard, Plus, Eye } from "lucide-react";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 import type { GeneralTransaction } from "@shared/schema";
 
 interface AccountsSidebarProps {
@@ -20,6 +21,7 @@ export default function AccountsSidebar({
   onAddTransaction 
 }: AccountsSidebarProps) {
   const settings = useAppSettings();
+  const [, setLocation] = useLocation();
 
   const calculateAccountBalance = (accountId: string) => {
     const accountTransactions = transactions.filter(transaction => {
@@ -151,7 +153,12 @@ export default function AccountsSidebar({
               <p className="text-sm text-gray-600">
                 Need to add or manage accounts?
               </p>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => setLocation('/settings')}
+              >
                 Manage Accounts
               </Button>
             </div>
