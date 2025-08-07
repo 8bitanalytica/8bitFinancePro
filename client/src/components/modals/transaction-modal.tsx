@@ -52,7 +52,27 @@ export default function TransactionModal({ transaction, onClose, type, propertie
     return currencies[code as keyof typeof currencies] || code;
   };
 
-  const categories = isRealEstate ? settings.realEstateCategories : settings.generalCategories;
+  // Get categories based on transaction type and module
+  const getCategories = () => {
+    if (isRealEstate) {
+      return settings.realEstateCategories || [];
+    }
+    
+    // For general finances, use the appropriate categorized lists
+    const watchedType = form.watch("type");
+    if (watchedType === "income") {
+      return settings.generalIncomeCategories || [];
+    } else if (watchedType === "expense") {
+      return settings.generalExpenseCategories || [];
+    } else if (watchedType === "transfer") {
+      return settings.generalTransferCategories || [];
+    }
+    
+    // Fallback to legacy categories
+    return settings.generalCategories || [];
+  };
+
+  const categories = getCategories();
 
   // Real Estate subcategories
   const realEstateSubcategories = [
