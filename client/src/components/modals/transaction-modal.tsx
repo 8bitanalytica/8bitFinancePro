@@ -182,9 +182,9 @@ export default function TransactionModal({ transaction, onClose, type, propertie
   // Update form values when switching to transfer and there's a selectedAccountId
   useEffect(() => {
     if (isTransfer && selectedAccountId && !isEditing) {
-      form.setValue("fromAccountId", selectedAccountId);
+      form.setValue("fromAccountId" as any, selectedAccountId);
       // Clear toAccountId to force user to select destination
-      form.setValue("toAccountId", "");
+      form.setValue("toAccountId" as any, "");
     }
   }, [isTransfer, selectedAccountId, form, isEditing]);
 
@@ -341,6 +341,34 @@ export default function TransactionModal({ transaction, onClose, type, propertie
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Account Selection - First field when no account is pre-selected */}
+            {!isRealEstate && !selectedAccountId && (
+              <FormField
+                control={form.control}
+                name="toAccountId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account first" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {settings.bankAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name} ({account.currency})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="type"
@@ -427,12 +455,11 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               )}
             />
 
-            {/* Account Selection for General Finances */}
-            {!isRealEstate && (
+            {/* Account Selection for General Finances - Only show when account is pre-selected or for transfers */}
+            {!isRealEstate && selectedAccountId && (
               <>
                 {/* Transfer fields */}
                 {isTransfer ? (
-                  selectedAccountId ? (
                     /* When in an account context, show the selected account as "From" and dropdown for "To" */
                     <div className="space-y-4">
                       <div className="space-y-2">
@@ -481,113 +508,85 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                         )}
                       />
                     </div>
-                  ) : (
-                    /* No account pre-selected - show both dropdowns */
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="fromAccountId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>From Account</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select from account" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {settings.bankAccounts.map((account) => (
-                                  <SelectItem key={account.id} value={account.id}>
-                                    {account.name} ({account.currency})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="toAccountId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>To Account</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select to account" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {settings.bankAccounts.map((account) => (
-                                  <SelectItem key={account.id} value={account.id}>
-                                    {account.name} ({account.currency})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )
                 ) : (
-                  /* Regular transaction account field */
-                  selectedAccountId ? (
-                    /* Account is pre-selected from sidebar - show read-only info */
-                    <div className="space-y-2">
-                      <FormLabel>Account</FormLabel>
-                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
-                        <div className="flex items-center space-x-3">
-                          <div 
-                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: selectedAccount?.color }}
-                          />
-                          <div>
-                            <span className="font-medium text-gray-900">{selectedAccount?.name}</span>
-                            <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
-                          </div>
+                  /* Regular transaction account field - Account is pre-selected from sidebar */
+                  <div className="space-y-2">
+                    <FormLabel>Account</FormLabel>
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                          style={{ backgroundColor: selectedAccount?.color }}
+                        />
+                        <div>
+                          <span className="font-medium text-gray-900">{selectedAccount?.name}</span>
+                          <span className="text-sm text-gray-600 ml-2">({selectedAccount?.currency})</span>
                         </div>
-                        <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                          Pre-selected
-                        </span>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Transaction will be added to this account. Currency: {selectedAccount?.currency}
-                      </p>
+                      <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                        Pre-selected
+                      </span>
                     </div>
-                  ) : (
-                    /* No account pre-selected - show dropdown */
-                    <FormField
-                      control={form.control}
-                      name="toAccountId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Account</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value as string || undefined}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select account" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {settings.bankAccounts.map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  {account.name} ({account.currency})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )
+                    <p className="text-xs text-gray-500">
+                      Transaction will be added to this account. Currency: {selectedAccount?.currency}
+                    </p>
+                  </div>
                 )}
               </>
+            )}
+
+            {/* Transfer fields for All Accounts view */}
+            {!isRealEstate && !selectedAccountId && isTransfer && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fromAccountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>From Account</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select from account" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {settings.bankAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} ({account.currency})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="toAccountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>To Account</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value as string || undefined}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select to account" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {settings.bankAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} ({account.currency})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             {/* Currency Conversion Display for Cross-Currency Transfers */}

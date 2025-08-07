@@ -316,70 +316,184 @@ export default function GeneralFinances() {
                 })()}
               </div>
             ) : (
-              // All accounts view - show stats grouped by currency
-              <div className="space-y-6">
-                {Object.entries(statistics.currencyGroups).map(([currency, stats]) => (
-                  <div key={currency} className="space-y-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{currency} Statistics</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center">
-                            <TrendingUp className="h-8 w-8 text-green-600" />
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-600">Income ({currency})</p>
-                              <p className="text-2xl font-bold text-green-600">
-                                {formatCurrency(stats.income, currency)}
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+              // All accounts view - Dashboard with multi-currency statistics and recent transactions
+              <div className="space-y-8">
+                {/* Dashboard Header */}
+                <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">Financial Dashboard</h3>
+                    <p className="text-sm text-gray-600 mt-1">Overview of all your accounts and recent activity</p>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Last 30 days • {displayedTransactions.length} transactions
+                  </div>
+                </div>
 
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center">
-                            <TrendingDown className="h-8 w-8 text-red-600" />
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-600">Expenses ({currency})</p>
-                              <p className="text-2xl font-bold text-red-600">
-                                {formatCurrency(stats.expenses, currency)}
-                              </p>
+                {/* Multi-Currency Statistics */}
+                <div className="space-y-6">
+                  {Object.entries(statistics.currencyGroups).map(([currency, stats]) => (
+                    <div key={currency} className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                          <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm mr-3">
+                            {currency}
+                          </span>
+                          {currency} Portfolio
+                        </h4>
+                        <div className="text-sm text-gray-500">
+                          {settings.bankAccounts.filter(acc => acc.currency === currency).length} account{settings.bankAccounts.filter(acc => acc.currency === currency).length !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Card className="border-l-4 border-l-green-500">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">Total Income</p>
+                                <p className="text-xl font-bold text-green-600">
+                                  {formatCurrency(stats.income, currency)}
+                                </p>
+                              </div>
+                              <TrendingUp className="h-6 w-6 text-green-600" />
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
 
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center">
-                            <ArrowUpDown className="h-8 w-8 text-blue-600" />
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-600">Transfers ({currency})</p>
-                              <p className="text-2xl font-bold text-blue-600">
-                                {formatCurrency(stats.transfers, currency)}
-                              </p>
+                        <Card className="border-l-4 border-l-red-500">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+                                <p className="text-xl font-bold text-red-600">
+                                  {formatCurrency(stats.expenses, currency)}
+                                </p>
+                              </div>
+                              <TrendingDown className="h-6 w-6 text-red-600" />
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
 
-                      <Card>
-                        <CardContent className="p-6">
-                          <div className="flex items-center">
-                            <Wallet className={`h-8 w-8 ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-                            <div className="ml-4">
-                              <p className="text-sm font-medium text-gray-600">Net Balance ({currency})</p>
-                              <p className={`text-2xl font-bold ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {formatCurrency(stats.income - stats.expenses, currency)}
-                              </p>
+                        <Card className="border-l-4 border-l-blue-500">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">Total Transfers</p>
+                                <p className="text-xl font-bold text-blue-600">
+                                  {formatCurrency(stats.transfers, currency)}
+                                </p>
+                              </div>
+                              <ArrowUpDown className="h-6 w-6 text-blue-600" />
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                          </CardContent>
+                        </Card>
+
+                        <Card className={`border-l-4 ${(stats.income - stats.expenses) >= 0 ? 'border-l-green-500' : 'border-l-red-500'}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-600">Net Balance</p>
+                                <p className={`text-xl font-bold ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {formatCurrency(stats.income - stats.expenses, currency)}
+                                </p>
+                              </div>
+                              <Wallet className={`h-6 w-6 ${(stats.income - stats.expenses) >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Recent Transactions Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold text-gray-900">Recent Transactions</h4>
+                    <div className="text-sm text-gray-500">
+                      Last 30 transactions from all accounts
                     </div>
                   </div>
-                ))}
+                  
+                  <Card>
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-gray-200">
+                        {displayedTransactions.slice(0, 30).map((transaction) => {
+                          const account = settings.bankAccounts.find(acc => 
+                            acc.id === transaction.toAccountId || acc.id === transaction.fromAccountId
+                          );
+                          const fromAccount = transaction.type === 'transfer' 
+                            ? settings.bankAccounts.find(acc => acc.id === transaction.fromAccountId)
+                            : null;
+                          const toAccount = transaction.type === 'transfer' 
+                            ? settings.bankAccounts.find(acc => acc.id === transaction.toAccountId)
+                            : account;
+
+                          return (
+                            <div key={transaction.id} className="p-4 hover:bg-gray-50 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                  <div className={`p-2 rounded-full ${
+                                    transaction.type === 'income' ? 'bg-green-100 text-green-600' :
+                                    transaction.type === 'expense' ? 'bg-red-100 text-red-600' :
+                                    'bg-blue-100 text-blue-600'
+                                  }`}>
+                                    {transaction.type === 'income' ? <TrendingUp className="h-4 w-4" /> :
+                                     transaction.type === 'expense' ? <TrendingDown className="h-4 w-4" /> :
+                                     <ArrowUpDown className="h-4 w-4" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2">
+                                      <p className="text-sm font-medium text-gray-900 capitalize">
+                                        {transaction.type}
+                                      </p>
+                                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                        {transaction.category}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 truncate mt-1">
+                                      {transaction.description}
+                                    </p>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      {transaction.type === 'transfer' ? (
+                                        <div className="flex items-center space-x-2 text-xs text-gray-500">
+                                          <span>{fromAccount?.name}</span>
+                                          <ArrowUpDown className="h-3 w-3" />
+                                          <span>{toAccount?.name}</span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center space-x-2">
+                                          <div 
+                                            className="w-3 h-3 rounded-full border border-white shadow-sm"
+                                            style={{ backgroundColor: account?.color }}
+                                          />
+                                          <span className="text-xs text-gray-500">{account?.name}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`text-sm font-semibold ${
+                                    transaction.type === 'income' ? 'text-green-600' :
+                                    transaction.type === 'expense' ? 'text-red-600' :
+                                    'text-blue-600'
+                                  }`}>
+                                    {transaction.type === 'expense' ? '-' : '+'}
+                                    {formatCurrency(parseFloat(transaction.amount), toAccount?.currency || 'USD')}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {format(new Date(transaction.date), 'MMM dd, HH:mm')}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
                 {Object.keys(statistics.currencyGroups).length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <p>No transactions found for the selected period</p>
