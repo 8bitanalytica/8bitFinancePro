@@ -4,7 +4,8 @@ import { AlertCircle } from "lucide-react";
 export default function NotFound() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
+      <div className="max-w-7xl mx-auto p-6 flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
         <CardContent className="pt-6">
           <div className="flex mb-4 gap-2">
             <AlertCircle className="h-8 w-8 text-red-500" />
@@ -15,7 +16,8 @@ export default function NotFound() {
             Did you forget to add the page to the router?
           </p>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -246,7 +246,7 @@ export default function RealEstateFinances() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="p-6 space-y-6">
+        <div className="max-w-7xl mx-auto p-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
