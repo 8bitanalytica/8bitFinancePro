@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown, Copy } from "lucide-react";
 import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
 import AccountsSidebar from "@/components/general/accounts-sidebar";
@@ -109,6 +109,17 @@ export default function GeneralFinances() {
         });
       }
     }
+  };
+
+  const handleDuplicateTransaction = (transaction: GeneralTransaction) => {
+    // Create a copy of the transaction with today's date and remove the ID
+    const duplicatedTransaction = {
+      ...transaction,
+      date: new Date().toISOString().split('T')[0], // Today's date
+      id: undefined, // Remove ID so it creates a new transaction
+    };
+    setEditingTransaction(duplicatedTransaction as any);
+    setShowModal(true);
   };
 
   const handleModalClose = () => {
@@ -366,18 +377,29 @@ export default function GeneralFinances() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="flex items-center gap-2 justify-end">
+                                <div className="flex items-center gap-1 justify-end">
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => handleEditTransaction(transaction)}
+                                    title="Edit transaction"
                                   >
                                     <Edit className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    onClick={() => handleDuplicateTransaction(transaction)}
+                                    title="Duplicate transaction"
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => handleDeleteTransaction(transaction)}
+                                    title="Delete transaction"
                                     className="text-red-600 hover:text-red-700"
                                   >
                                     <Trash2 className="h-4 w-4" />
