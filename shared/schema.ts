@@ -102,7 +102,7 @@ export const insertGeneralTransactionSchema = createInsertSchema(generalTransact
   date: z.string().or(z.date()).transform((val) => 
     typeof val === 'string' ? new Date(val) : val
   ),
-  receiptUrl: z.string().optional(),
+  receiptUrl: z.string().optional().nullable(),
 });
 
 export const insertPropertySchema = createInsertSchema(properties).omit({
@@ -129,8 +129,8 @@ export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTr
   date: z.string().or(z.date()).transform((val) => 
     typeof val === 'string' ? new Date(val) : val
   ),
-  receiptUrl: z.string().optional(),
-  projectId: z.number().optional(),
+  receiptUrl: z.string().optional().nullable(),
+  projectId: z.number().optional().nullable(),
 });
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
@@ -145,7 +145,7 @@ export const insertDeviceTransactionSchema = createInsertSchema(deviceTransactio
   date: z.string().or(z.date()).transform((val) => 
     typeof val === 'string' ? new Date(val) : val
   ),
-  receiptUrl: z.string().optional(),
+  receiptUrl: z.string().optional().nullable(),
 });
 
 // Types
