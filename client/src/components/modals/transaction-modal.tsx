@@ -827,8 +827,8 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               )}
             </div>
 
-            {/* Recurring Transaction Section - Only for Expenses */}
-            {(watchedType === "expense" && !isRealEstate) && (
+            {/* Recurring Transaction Section - For All Transaction Types */}
+            {!isRealEstate && (
               <div className="space-y-4 p-4 border rounded-lg bg-purple-50">
                 <div className="flex items-center space-x-2">
                   <input
@@ -839,7 +839,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                     className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                   />
                   <label htmlFor="isRecurring" className="text-sm font-medium text-purple-900">
-                    🔄 Make this a recurring expense
+                    🔄 Make this a recurring transaction
                   </label>
                 </div>
 
@@ -920,7 +920,7 @@ export default function TransactionModal({ transaction, onClose, type, propertie
                     </div>
 
                     <div className="text-xs text-purple-600 bg-purple-100 p-2 rounded">
-                      <strong>Note:</strong> This will create a recurring expense that automatically generates transactions on the specified schedule. You can manage all recurring transactions from the Dashboard.
+                      <strong>Note:</strong> This will create a recurring transaction that automatically generates future instances on the specified schedule. You can manage all recurring transactions from the Dashboard.
                     </div>
                   </div>
                 )}

@@ -18,6 +18,88 @@ import { ProviderFactory } from "./bank-providers/provider-factory";
 import type { TransactionData } from "./bank-providers/base-provider";
 import { z } from "zod";
 
+// Helper function to calculate next date based on frequency
+function getNextDate(startDate: Date, frequency: string, intervalCount: number, occurrence: number): Date {
+  const nextDate = new Date(startDate);
+  
+  switch (frequency) {
+    case 'daily':
+      nextDate.setDate(nextDate.getDate() + (intervalCount * occurrence));
+      break;
+    case 'weekly':
+      nextDate.setDate(nextDate.getDate() + (intervalCount * 7 * occurrence));
+      break;
+    case 'monthly':
+      nextDate.setMonth(nextDate.getMonth() + (intervalCount * occurrence));
+      break;
+    case 'quarterly':
+      nextDate.setMonth(nextDate.getMonth() + (intervalCount * 3 * occurrence));
+      break;
+    case 'yearly':
+      nextDate.setFullYear(nextDate.getFullYear() + (intervalCount * occurrence));
+      break;
+  }
+  
+  return nextDate;
+}
+
+// Helper function to generate future instances for a recurring transaction
+async function generateFutureInstances(recurringTransaction: any): Promise<void> {
+  const startDate = new Date(recurringTransaction.startDate);
+  const endDate = recurringTransaction.endDate ? new Date(recurringTransaction.endDate) : null;
+  const oneYearFromNow = new Date();
+  oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+  
+  // Limit generation to either end date or one year from now
+  const maxDate = endDate && endDate < oneYearFromNow ? endDate : oneYearFromNow;
+  
+  let occurrence = 1;
+  const instances = [];
+  
+  while (true) {
+    const nextDate = getNextDate(startDate, recurringTransaction.frequency, recurringTransaction.intervalCount, occurrence);
+    
+    // Stop if we've reached the max date
+    if (nextDate > maxDate) break;
+    
+    // Create transaction instance
+    const transactionData = {
+      type: recurringTransaction.type,
+      amount: recurringTransaction.amount,
+      description: `${recurringTransaction.description} (Auto-generated from: ${recurringTransaction.name})`,
+      category: recurringTransaction.category,
+      date: nextDate.toISOString().split('T')[0],
+      time: "12:00", // Default time
+      toAccountId: recurringTransaction.accountId,
+      fromAccountId: recurringTransaction.type === 'transfer' ? null : null,
+      propertyId: recurringTransaction.propertyId,
+      deviceId: recurringTransaction.deviceId,
+      recurringTransactionId: recurringTransaction.id
+    };
+
+    instances.push(transactionData);
+    occurrence++;
+    
+    // Safety limit to prevent infinite loops
+    if (occurrence > 1000) break;
+  }
+  
+  // Batch create all instances
+  for (const instance of instances) {
+    try {
+      if (recurringTransaction.module === 'general') {
+        await storage.createGeneralTransaction(instance);
+      } else if (recurringTransaction.module === 'real-estate') {
+        await storage.createRealEstateTransaction(instance);
+      } else if (recurringTransaction.module === 'devices') {
+        await storage.createDeviceTransaction(instance);
+      }
+    } catch (error) {
+      console.error('Failed to create recurring transaction instance:', error);
+    }
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // General Transactions Routes
   app.get("/api/general-transactions", async (req, res) => {
@@ -893,6 +975,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedTransaction = insertRecurringTransactionSchema.parse(req.body);
       const transaction = await storage.createRecurringTransaction(validatedTransaction);
+      
+      // Generate future instances for the next year
+      if (transaction) {
+        await generateFutureInstances(transaction);
+      }
+      
       res.status(201).json(transaction);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -974,6 +1062,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to process due recurring transactions" });
+    }
+  });
+
+  // Regenerate future instances for all recurring transactions
+  app.post("/api/recurring-transactions/regenerate-instances", async (req, res) => {
+    try {
+      const recurringTransactions = await storage.getRecurringTransactions();
+      
+      let regeneratedCount = 0;
+      for (const transaction of recurringTransactions) {
+        if (transaction.isActive) {
+          await generateFutureInstances(transaction);
+          regeneratedCount++;
+        }
+      }
+      
+      res.json({ 
+        message: `Regenerated instances for ${regeneratedCount} recurring transactions`,
+        regenerated: regeneratedCount 
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to regenerate instances" });
     }
   });
 
