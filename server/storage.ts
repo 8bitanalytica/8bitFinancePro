@@ -7,6 +7,8 @@ import {
   InsertPropertyProject,
   PropertyUtilityBlock,
   InsertPropertyUtilityBlock,
+  CategoryBlock,
+  InsertCategoryBlock,
   RealEstateTransaction,
   InsertRealEstateTransaction,
   Device,
@@ -21,6 +23,7 @@ import {
   properties,
   propertyProjects,
   propertyUtilityBlocks,
+  categoryBlocks,
   realEstateTransactions,
   devices,
   deviceTransactions,
@@ -62,6 +65,15 @@ export interface IStorage {
   createPropertyUtilityBlock(utilityBlock: InsertPropertyUtilityBlock): Promise<PropertyUtilityBlock>;
   updatePropertyUtilityBlock(id: number, utilityBlock: Partial<InsertPropertyUtilityBlock>): Promise<PropertyUtilityBlock | undefined>;
   deletePropertyUtilityBlock(id: number): Promise<boolean>;
+
+  // Category Blocks
+  getCategoryBlocks(): Promise<CategoryBlock[]>;
+  getCategoryBlocksByProperty(propertyId: number): Promise<CategoryBlock[]>;
+  getCategoryBlocksByModule(module: string): Promise<CategoryBlock[]>;
+  getCategoryBlock(id: number): Promise<CategoryBlock | undefined>;
+  createCategoryBlock(categoryBlock: InsertCategoryBlock): Promise<CategoryBlock>;
+  updateCategoryBlock(id: number, categoryBlock: Partial<InsertCategoryBlock>): Promise<CategoryBlock | undefined>;
+  deleteCategoryBlock(id: number): Promise<boolean>;
   
   // Real Estate Transactions
   getRealEstateTransactions(): Promise<RealEstateTransaction[]>;
@@ -116,6 +128,7 @@ export class MemStorage implements IStorage {
   private properties: Map<number, Property>;
   private propertyProjects: Map<number, PropertyProject>;
   private propertyUtilityBlocks: Map<number, PropertyUtilityBlock>;
+  private categoryBlocks: Map<number, CategoryBlock>;
   private realEstateTransactions: Map<number, RealEstateTransaction>;
   private devices: Map<number, Device>;
   private deviceTransactions: Map<number, DeviceTransaction>;
@@ -126,6 +139,7 @@ export class MemStorage implements IStorage {
   private currentPropertyId: number;
   private currentPropertyProjectId: number;
   private currentPropertyUtilityBlockId: number;
+  private currentCategoryBlockId: number;
   private currentRealEstateTransactionId: number;
   private currentDeviceId: number;
   private currentDeviceTransactionId: number;
@@ -138,6 +152,7 @@ export class MemStorage implements IStorage {
     this.properties = new Map();
     this.propertyProjects = new Map();
     this.propertyUtilityBlocks = new Map();
+    this.categoryBlocks = new Map();
     this.realEstateTransactions = new Map();
     this.devices = new Map();
     this.deviceTransactions = new Map();
@@ -148,6 +163,7 @@ export class MemStorage implements IStorage {
     this.currentPropertyId = 1;
     this.currentPropertyProjectId = 1;
     this.currentPropertyUtilityBlockId = 1;
+    this.currentCategoryBlockId = 1;
     this.currentRealEstateTransactionId = 1;
     this.currentDeviceId = 1;
     this.currentDeviceTransactionId = 1;
@@ -337,6 +353,57 @@ export class MemStorage implements IStorage {
 
   async deletePropertyUtilityBlock(id: number): Promise<boolean> {
     return this.propertyUtilityBlocks.delete(id);
+  }
+
+  // Category Blocks
+  async getCategoryBlocks(): Promise<CategoryBlock[]> {
+    return Array.from(this.categoryBlocks.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getCategoryBlocksByProperty(propertyId: number): Promise<CategoryBlock[]> {
+    return Array.from(this.categoryBlocks.values())
+      .filter(block => block.propertyId === propertyId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getCategoryBlocksByModule(module: string): Promise<CategoryBlock[]> {
+    return Array.from(this.categoryBlocks.values())
+      .filter(block => block.module === module)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getCategoryBlock(id: number): Promise<CategoryBlock | undefined> {
+    return this.categoryBlocks.get(id);
+  }
+
+  async createCategoryBlock(insertCategoryBlock: InsertCategoryBlock): Promise<CategoryBlock> {
+    const id = this.currentCategoryBlockId++;
+    const categoryBlock: CategoryBlock = {
+      ...insertCategoryBlock,
+      id,
+      createdAt: new Date(),
+      description: insertCategoryBlock.description ?? null,
+      propertyId: insertCategoryBlock.propertyId ?? null,
+      monthlyBudget: insertCategoryBlock.monthlyBudget ?? null,
+      yearlyBudget: insertCategoryBlock.yearlyBudget ?? null,
+      alertThreshold: insertCategoryBlock.alertThreshold ?? 80,
+      isActive: insertCategoryBlock.isActive ?? true,
+    };
+    this.categoryBlocks.set(id, categoryBlock);
+    return categoryBlock;
+  }
+
+  async updateCategoryBlock(id: number, updates: Partial<InsertCategoryBlock>): Promise<CategoryBlock | undefined> {
+    const existing = this.categoryBlocks.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.categoryBlocks.set(id, updated);
+    return updated;
+  }
+
+  async deleteCategoryBlock(id: number): Promise<boolean> {
+    return this.categoryBlocks.delete(id);
   }
 
   // Real Estate Transactions
@@ -812,6 +879,39 @@ export class DatabaseStorage implements IStorage {
 
   async deletePropertyUtilityBlock(id: number): Promise<boolean> {
     const result = await db.delete(propertyUtilityBlocks).where(eq(propertyUtilityBlocks.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Category Blocks
+  async getCategoryBlocks(): Promise<CategoryBlock[]> {
+    return await db.select().from(categoryBlocks).orderBy(categoryBlocks.name);
+  }
+
+  async getCategoryBlocksByProperty(propertyId: number): Promise<CategoryBlock[]> {
+    return await db.select().from(categoryBlocks).where(eq(categoryBlocks.propertyId, propertyId)).orderBy(categoryBlocks.name);
+  }
+
+  async getCategoryBlocksByModule(module: string): Promise<CategoryBlock[]> {
+    return await db.select().from(categoryBlocks).where(eq(categoryBlocks.module, module)).orderBy(categoryBlocks.name);
+  }
+
+  async getCategoryBlock(id: number): Promise<CategoryBlock | undefined> {
+    const [result] = await db.select().from(categoryBlocks).where(eq(categoryBlocks.id, id));
+    return result;
+  }
+
+  async createCategoryBlock(categoryBlock: InsertCategoryBlock): Promise<CategoryBlock> {
+    const [result] = await db.insert(categoryBlocks).values(categoryBlock).returning();
+    return result;
+  }
+
+  async updateCategoryBlock(id: number, categoryBlock: Partial<InsertCategoryBlock>): Promise<CategoryBlock | undefined> {
+    const [result] = await db.update(categoryBlocks).set(categoryBlock).where(eq(categoryBlocks.id, id)).returning();
+    return result;
+  }
+
+  async deleteCategoryBlock(id: number): Promise<boolean> {
+    const result = await db.delete(categoryBlocks).where(eq(categoryBlocks.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 

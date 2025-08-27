@@ -59,12 +59,28 @@ export const propertyUtilityBlocks = pgTable("property_utility_blocks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Category Blocks Table - for organizing transactions by category with budget tracking
+export const categoryBlocks = pgTable("category_blocks", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").references(() => properties.id), // Optional: property-specific category blocks
+  name: text("name").notNull(), // e.g. "Maintenance Tracker", "Insurance Manager"
+  description: text("description"),
+  category: text("category").notNull(), // e.g. "Maintenance", "Insurance", "Repairs"
+  module: text("module").notNull().default("real-estate"), // "general", "real-estate", "devices"
+  monthlyBudget: decimal("monthly_budget", { precision: 10, scale: 2 }), // budget mensile previsto
+  yearlyBudget: decimal("yearly_budget", { precision: 10, scale: 2 }), // budget annuale previsto
+  alertThreshold: integer("alert_threshold").default(80), // soglia percentuale per avvisi (80%)
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Real Estate Transactions Table
 export const realEstateTransactions = pgTable("real_estate_transactions", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").notNull(),
   projectId: integer("project_id").references(() => propertyProjects.id), // Optional project tracking
   utilityBlockId: integer("utility_block_id").references(() => propertyUtilityBlocks.id), // Optional utility block tracking
+  categoryBlockId: integer("category_block_id").references(() => categoryBlocks.id), // Optional category block tracking
   type: text("type").notNull(), // "income" or "expense"
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   description: text("description").notNull(),
@@ -181,6 +197,14 @@ export type InsertPropertyProject = z.infer<typeof insertPropertyProjectSchema>;
 
 export type PropertyUtilityBlock = typeof propertyUtilityBlocks.$inferSelect;
 export type InsertPropertyUtilityBlock = z.infer<typeof insertPropertyUtilityBlockSchema>;
+
+export const insertCategoryBlockSchema = createInsertSchema(categoryBlocks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CategoryBlock = typeof categoryBlocks.$inferSelect;
+export type InsertCategoryBlock = z.infer<typeof insertCategoryBlockSchema>;
 
 export type RealEstateTransaction = typeof realEstateTransactions.$inferSelect;
 export type InsertRealEstateTransaction = z.infer<typeof insertRealEstateTransactionSchema>;

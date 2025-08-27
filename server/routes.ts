@@ -6,6 +6,7 @@ import {
   insertPropertySchema,
   insertPropertyProjectSchema,
   insertPropertyUtilityBlockSchema,
+  insertCategoryBlockSchema,
   insertRealEstateTransactionSchema,
   insertDeviceSchema,
   insertDeviceTransactionSchema,
@@ -290,6 +291,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete utility block" });
+    }
+  });
+
+  // Category Blocks Routes
+  app.get("/api/category-blocks", async (req, res) => {
+    try {
+      const propertyId = req.query.propertyId ? parseInt(req.query.propertyId as string) : undefined;
+      const module = req.query.module as string | undefined;
+      let categoryBlocks;
+      
+      if (propertyId) {
+        categoryBlocks = await storage.getCategoryBlocksByProperty(propertyId);
+      } else if (module) {
+        categoryBlocks = await storage.getCategoryBlocksByModule(module);
+      } else {
+        categoryBlocks = await storage.getCategoryBlocks();
+      }
+      
+      console.log("Category blocks fetched:", categoryBlocks);
+      res.json(categoryBlocks);
+    } catch (error) {
+      console.error("Error fetching category blocks:", error);
+      res.status(500).json({ message: "Failed to fetch category blocks" });
+    }
+  });
+
+  app.get("/api/category-blocks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const categoryBlock = await storage.getCategoryBlock(id);
+      if (!categoryBlock) {
+        return res.status(404).json({ message: "Category block not found" });
+      }
+      res.json(categoryBlock);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch category block" });
+    }
+  });
+
+  app.post("/api/category-blocks", async (req, res) => {
+    try {
+      const validatedData = insertCategoryBlockSchema.parse(req.body);
+      const categoryBlock = await storage.createCategoryBlock(validatedData);
+      res.status(201).json(categoryBlock);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create category block" });
+    }
+  });
+
+  app.put("/api/category-blocks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertCategoryBlockSchema.partial().parse(req.body);
+      const categoryBlock = await storage.updateCategoryBlock(id, validatedData);
+      if (!categoryBlock) {
+        return res.status(404).json({ message: "Category block not found" });
+      }
+      res.json(categoryBlock);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update category block" });
+    }
+  });
+
+  app.delete("/api/category-blocks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteCategoryBlock(id);
+      if (!success) {
+        return res.status(404).json({ message: "Category block not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete category block" });
     }
   });
 

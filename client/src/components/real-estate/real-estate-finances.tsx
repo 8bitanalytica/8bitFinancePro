@@ -13,22 +13,25 @@ import TransactionModal from "@/components/modals/transaction-modal";
 import PropertyModal from "@/components/modals/property-modal";
 import PropertyProjectModal from "@/components/modals/property-project-modal";
 import { UtilityBlockModal } from "@/components/modals/utility-block-modal";
+import { CategoryBlockModal } from "@/components/modals/category-block-modal";
 import PropertiesSidebar from "@/components/real-estate/properties-sidebar";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import type { RealEstateTransaction, Property, PropertyProject, PropertyUtilityBlock } from "@shared/schema";
+import type { RealEstateTransaction, Property, PropertyProject, PropertyUtilityBlock, CategoryBlock } from "@shared/schema";
 
 export default function RealEstateFinances() {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showUtilityBlockModal, setShowUtilityBlockModal] = useState(false);
+  const [showCategoryBlockModal, setShowCategoryBlockModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<RealEstateTransaction | undefined>();
   const [editingProperty, setEditingProperty] = useState<Property | undefined>();
   const [editingProject, setEditingProject] = useState<PropertyProject | undefined>();
   const [editingUtilityBlock, setEditingUtilityBlock] = useState<PropertyUtilityBlock | undefined>();
+  const [editingCategoryBlock, setEditingCategoryBlock] = useState<CategoryBlock | undefined>();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
@@ -57,6 +60,18 @@ export default function RealEstateFinances() {
       const response = await fetch("/api/property-utility-blocks");
       if (!response.ok) {
         throw new Error('Failed to fetch utility blocks');
+      }
+      return response.json();
+    },
+    retry: false,
+  });
+
+  const { data: categoryBlocks = [], isLoading: categoryBlocksLoading, refetch: refetchCategoryBlocks } = useQuery({
+    queryKey: ["/api/category-blocks"],
+    queryFn: async () => {
+      const response = await fetch("/api/category-blocks?module=real-estate");
+      if (!response.ok) {
+        throw new Error('Failed to fetch category blocks');
       }
       return response.json();
     },
@@ -232,6 +247,22 @@ export default function RealEstateFinances() {
     refetchUtilityBlocks();
   };
 
+  const handleAddCategoryBlock = () => {
+    setEditingCategoryBlock(undefined);
+    setShowCategoryBlockModal(true);
+  };
+
+  const handleEditCategoryBlock = (categoryBlock: CategoryBlock) => {
+    setEditingCategoryBlock(categoryBlock);
+    setShowCategoryBlockModal(true);
+  };
+
+  const handleCategoryBlockModalClose = () => {
+    setShowCategoryBlockModal(false);
+    setEditingCategoryBlock(undefined);
+    refetchCategoryBlocks();
+  };
+
   const handlePropertySelect = (propertyId: number | null) => {
     setSelectedPropertyId(propertyId);
     setVisibleTransactions(30);
@@ -317,6 +348,15 @@ export default function RealEstateFinances() {
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Utility
+                </Button>
+                <Button 
+                  onClick={handleAddCategoryBlock} 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Category Block
                 </Button>
               </div>
             )}
@@ -649,6 +689,146 @@ export default function RealEstateFinances() {
             </Card>
           )}
 
+          {/* Category Blocks Section - Global blocks for all properties */}
+          {categoryBlocks.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5 text-orange-600" />
+                  Category Blocks
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {categoryBlocks.map((block) => {
+                    // Filter transactions for this specific category block
+                    const blockTransactions = displayedTransactions.filter(t => 
+                      t.category === block.category && 
+                      (!block.propertyId || t.propertyId === block.propertyId)
+                    );
+                    const monthlyExpenses = blockTransactions
+                      .filter(t => t.type === 'expense')
+                      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                    const monthlyBudget = block.monthlyBudget ? parseFloat(block.monthlyBudget) : 0;
+                    const budgetUsed = monthlyBudget > 0 ? (monthlyExpenses / monthlyBudget) * 100 : 0;
+
+                    return (
+                      <div key={block.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{block.name}</h4>
+                            <p className="text-sm text-orange-600">{block.category}</p>
+                            {block.description && (
+                              <p className="text-xs text-gray-500 mt-1">{block.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="secondary" 
+                              className={cn(
+                                "text-xs",
+                                block.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              )}
+                            >
+                              {block.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditCategoryBlock(block)}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Scope Display */}
+                        <div className="mb-3">
+                          <p className="text-xs text-gray-500">Scope:</p>
+                          <p className="text-sm font-medium">
+                            {block.propertyId 
+                              ? properties.find(p => p.id === block.propertyId)?.name || 'Unknown Property'
+                              : 'All Properties'
+                            }
+                          </p>
+                        </div>
+
+                        {/* Category Budget and Expenses */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-gray-500">Monthly Budget</p>
+                            <p className="font-semibold text-orange-600">
+                              {block.monthlyBudget ? formatCurrency(parseFloat(block.monthlyBudget)) : 'No budget'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">This Month</p>
+                            <p className="font-semibold text-red-600">
+                              {formatCurrency(monthlyExpenses)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Budget Progress Bar */}
+                        {monthlyBudget > 0 && (
+                          <div className="mb-4">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <span>Budget Usage</span>
+                              <span>{budgetUsed.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  "h-2 rounded-full transition-all",
+                                  budgetUsed > (block.alertThreshold || 80) ? "bg-red-500" :
+                                  budgetUsed > 60 ? "bg-yellow-500" : "bg-green-500"
+                                )}
+                                style={{ width: `${Math.min(budgetUsed, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Recent Category Transactions */}
+                        {blockTransactions.length > 0 && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 mb-2">Recent Expenses</h5>
+                            <div className="space-y-2">
+                              {blockTransactions.slice(0, 2).map((transaction) => (
+                                <div key={transaction.id} className="flex justify-between items-center text-sm">
+                                  <div>
+                                    <p className="font-medium">{transaction.description}</p>
+                                    <p className="text-gray-500">{format(new Date(transaction.date), "MMM dd")}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-red-600">
+                                      -{formatCurrency(parseFloat(transaction.amount))}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                              {blockTransactions.length > 2 && (
+                                <p className="text-xs text-gray-500 text-center pt-2">
+                                  +{blockTransactions.length - 2} more expenses
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {blockTransactions.length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            <p className="text-sm">No expenses recorded yet</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Filters and Search */}
           <div className="flex gap-4">
             <div className="flex-1">
@@ -836,6 +1016,13 @@ export default function RealEstateFinances() {
         utilityBlock={editingUtilityBlock}
         properties={properties}
         propertyId={selectedPropertyId || undefined}
+      />
+
+      <CategoryBlockModal
+        isOpen={showCategoryBlockModal}
+        onClose={handleCategoryBlockModalClose}
+        categoryBlock={editingCategoryBlock}
+        properties={properties}
       />
     </div>
   );
