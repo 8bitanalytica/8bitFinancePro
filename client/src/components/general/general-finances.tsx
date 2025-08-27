@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown, Copy, Repeat, Clock, PieChart, CreditCard, DollarSign, PiggyBank, Landmark, Bitcoin, Users, Smartphone, Building } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, Edit, Trash2, Search, ArrowUpDown, ArrowDown, ArrowUp, Eye, ChevronDown, Copy, Repeat, Clock, PieChart, CreditCard, DollarSign, PiggyBank, Landmark, Bitcoin, Users, Smartphone, Building, Play } from "lucide-react";
 import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
 import { RecurringTransactionModal } from "@/components/modals/recurring-transaction-modal";
@@ -42,6 +42,10 @@ export default function GeneralFinances() {
       const response = await fetch('/api/recurring-transactions/due');
       return response.json();
     },
+  });
+
+  const { data: recurringTransactions = [] } = useQuery({
+    queryKey: ['/api/recurring-transactions'],
   });
 
   // Dynamic calculations based on displayed transactions
@@ -427,7 +431,152 @@ export default function GeneralFinances() {
                     <p className="text-sm text-gray-600">Le tue prossime entrate e uscite programmate</p>
                   </CardHeader>
                   <CardContent>
-                    <RecurringTransactionsList />
+                    {(() => {
+                      const processRecurringTransaction = async (id: number) => {
+                        try {
+                          await fetch(`/api/recurring-transactions/${id}/process`, { method: 'POST' });
+                          toast({ title: "Transazione ricorrente elaborata" });
+                          refetch();
+                        } catch (error) {
+                          toast({
+                            title: "Errore",
+                            description: "Impossibile elaborare la transazione",
+                            variant: "destructive",
+                          });
+                        }
+                      };
+
+                      const getTypeColor = (type: string) => {
+                        switch (type) {
+                          case "income": return "bg-green-100 text-green-800";
+                          case "expense": return "bg-red-100 text-red-800";
+                          case "transfer": return "bg-blue-100 text-blue-800";
+                          default: return "bg-gray-100 text-gray-800";
+                        }
+                      };
+
+                      const getFrequencyText = (frequency: string, intervalCount: number) => {
+                        const interval = intervalCount > 1 ? ` ogni ${intervalCount}` : '';
+                        switch (frequency) {
+                          case 'daily': return `Giornaliera${intervalCount > 1 ? ` (${intervalCount} giorni)` : ''}`;
+                          case 'weekly': return `Settimanale${intervalCount > 1 ? ` (${intervalCount} settimane)` : ''}`;
+                          case 'monthly': return `Mensile${intervalCount > 1 ? ` (${intervalCount} mesi)` : ''}`;
+                          case 'quarterly': return `Trimestrale${intervalCount > 1 ? ` (${intervalCount} trimestri)` : ''}`;
+                          case 'yearly': return `Annuale${intervalCount > 1 ? ` (${intervalCount} anni)` : ''}`;
+                          default: return frequency;
+                        }
+                      };
+
+                      if (recurringTransactions.length === 0) {
+                        return (
+                          <div className="text-center py-8">
+                            <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-500 mb-2">Nessuna transazione ricorrente configurata</p>
+                            <p className="text-sm text-gray-400">
+                              Crea una transazione e abilita l'opzione ricorrente per automatizzare le tue entrate e spese
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-4">
+                          {recurringTransactions.map((transaction: any) => {
+                            const account = settings.bankAccounts.find(acc => acc.id === transaction.accountId);
+                            const currency = account?.currency || 'EUR';
+                            const nextDue = new Date(transaction.nextDueDate);
+                            const isOverdue = nextDue < new Date();
+                            
+                            return (
+                              <div
+                                key={transaction.id}
+                                className={cn(
+                                  "p-4 border rounded-lg transition-colors",
+                                  isOverdue ? "bg-red-50 border-red-200" : "bg-gray-50",
+                                  !transaction.isActive && "opacity-60"
+                                )}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h4 className="font-semibold text-gray-900">{transaction.name}</h4>
+                                      <Badge className={getTypeColor(transaction.type)}>
+                                        {transaction.type === 'income' ? 'Entrata' : 
+                                         transaction.type === 'expense' ? 'Spesa' : 'Trasferimento'}
+                                      </Badge>
+                                      <Badge variant="outline" className="text-xs">
+                                        {getFrequencyText(transaction.frequency, transaction.intervalCount)}
+                                      </Badge>
+                                      {!transaction.isActive && (
+                                        <Badge variant="secondary" className="bg-gray-200 text-gray-600">
+                                          In Pausa
+                                        </Badge>
+                                      )}
+                                      {isOverdue && (
+                                        <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-300">
+                                          Scaduta
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    
+                                    <p className="text-sm text-gray-600 mb-3">{transaction.description}</p>
+                                    
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                      <div>
+                                        <span className="text-gray-500">Importo:</span>
+                                        <p className="font-semibold text-lg">
+                                          {formatCurrency(parseFloat(transaction.amount), currency)}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Categoria:</span>
+                                        <p className="font-medium">{transaction.category}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Conto:</span>
+                                        <p className="font-medium">{account?.name || 'Sconosciuto'}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-500">Prossima scadenza:</span>
+                                        <p className={cn(
+                                          "font-medium",
+                                          isOverdue ? "text-red-600" : "text-gray-900"
+                                        )}>
+                                          {format(nextDue, "dd MMM yyyy")}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    {transaction.endDate && (
+                                      <div className="mt-3 pt-3 border-t text-xs text-gray-500">
+                                        <div className="flex justify-between">
+                                          <span>Progresso: {transaction.currentOccurrence} esecuzioni</span>
+                                          <span>Termina: {format(new Date(transaction.endDate), "dd MMM yyyy")}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 ml-4">
+                                    {transaction.isActive && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => processRecurringTransaction(transaction.id)}
+                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        title="Elabora ora"
+                                      >
+                                        <Play className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
 
