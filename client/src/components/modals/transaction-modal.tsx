@@ -425,6 +425,32 @@ export default function TransactionModal({ transaction, onClose, type, propertie
           
           // If recurring is enabled, create a recurring transaction
           if (isRecurring && values.type === "expense") {
+            // Calculate next due date based on frequency
+            const calculateNextDueDate = (startDate: Date, frequency: string, intervalCount: number) => {
+              const nextDate = new Date(startDate);
+              switch (frequency) {
+                case 'daily':
+                  nextDate.setDate(nextDate.getDate() + intervalCount);
+                  break;
+                case 'weekly':
+                  nextDate.setDate(nextDate.getDate() + (intervalCount * 7));
+                  break;
+                case 'monthly':
+                  nextDate.setMonth(nextDate.getMonth() + intervalCount);
+                  break;
+                case 'quarterly':
+                  nextDate.setMonth(nextDate.getMonth() + (intervalCount * 3));
+                  break;
+                case 'yearly':
+                  nextDate.setFullYear(nextDate.getFullYear() + intervalCount);
+                  break;
+              }
+              return nextDate;
+            };
+
+            const startDate = new Date(recurringData.startDate);
+            const nextDueDate = calculateNextDueDate(startDate, recurringData.frequency, recurringData.intervalCount);
+
             const recurringTransactionData = {
               module: "general",
               name: recurringData.name || values.description,
@@ -434,8 +460,9 @@ export default function TransactionModal({ transaction, onClose, type, propertie
               category: values.category,
               frequency: recurringData.frequency,
               intervalCount: recurringData.intervalCount,
-              startDate: new Date(recurringData.startDate),
+              startDate: startDate,
               endDate: recurringData.endDate ? new Date(recurringData.endDate) : null,
+              nextDueDate: nextDueDate,
               accountId: (values as any).toAccountId,
               isActive: true,
             };

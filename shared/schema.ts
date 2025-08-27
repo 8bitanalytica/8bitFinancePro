@@ -17,6 +17,8 @@ export const generalTransactions = pgTable("general_transactions", {
   realEstateSubcategory: text("real_estate_subcategory"), // Gas, Electricity, Taxes, etc.
   // Device specific fields  
   deviceId: integer("device_id"), // When category is "Device"
+  // Recurring transaction tracking
+  recurringTransactionId: integer("recurring_transaction_id").references(() => recurringTransactions.id), // If generated from recurring transaction
   // Receipt upload field
   receiptUrl: text("receipt_url"), // URL per la ricevuta caricata (PDF o JPEG)
   createdAt: timestamp("created_at").defaultNow().notNull(),

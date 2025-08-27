@@ -1094,9 +1094,10 @@ export class DatabaseStorage implements IStorage {
           await this.createGeneralTransaction({
             type: recurring.type,
             amount: parseFloat(recurring.amount),
-            description: `${recurring.description} (Recurring)`,
+            description: `${recurring.description} (Ricorrente)`,
             category: recurring.category,
             toAccountId: recurring.accountId || '',
+            recurringTransactionId: recurring.id,
             date: new Date(),
           });
           break;

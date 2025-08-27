@@ -36,6 +36,14 @@ export default function GeneralFinances() {
     queryFn: generalTransactionsApi.getAll,
   });
 
+  const { data: dueRecurringTransactions = [] } = useQuery({
+    queryKey: ["/api/recurring-transactions/due"],
+    queryFn: async () => {
+      const response = await fetch('/api/recurring-transactions/due');
+      return response.json();
+    },
+  });
+
   // Dynamic calculations based on displayed transactions
   const displayedTransactions = useMemo(() => {
     let filtered = transactions;
@@ -294,6 +302,47 @@ export default function GeneralFinances() {
                 </p>
               </div>
             </div>
+
+            {/* Due Recurring Transactions Alert */}
+            {dueRecurringTransactions.length > 0 && (
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Clock className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-purple-900">
+                        Transazioni Ricorrenti in Scadenza
+                      </h3>
+                      <p className="text-sm text-purple-700">
+                        Hai {dueRecurringTransactions.length} transazione{dueRecurringTransactions.length > 1 ? 'i' : ''} ricorrente{dueRecurringTransactions.length > 1 ? 'i' : ''} pronte per essere elaborate
+                      </p>
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await fetch('/api/recurring-transactions/process-due', { method: 'POST' });
+                          toast({ title: "Transazioni ricorrenti elaborate con successo" });
+                          refetch();
+                        } catch (error) {
+                          toast({
+                            title: "Errore",
+                            description: "Impossibile elaborare le transazioni ricorrenti",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      <Repeat className="h-4 w-4 mr-2" />
+                      Elabora Tutte
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Statistics Cards - Multi-Currency Support */}
             {selectedAccountId ? (
@@ -754,11 +803,23 @@ export default function GeneralFinances() {
                             ? settings.bankAccounts.find(acc => acc.id === transferDirection.accountId)
                             : null;
 
+                          const isRecurring = !!(transaction as any).recurringTransactionId;
+                          
                           return (
-                            <TableRow key={transaction.id}>
+                            <TableRow 
+                              key={transaction.id}
+                              className={isRecurring ? "bg-purple-50 border-l-4 border-l-purple-500" : ""}
+                            >
                               <TableCell className="font-medium">
                                 <div className="flex flex-col">
-                                  <span>{format(new Date(transaction.date), "MMM dd, yyyy")}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span>{format(new Date(transaction.date), "MMM dd, yyyy")}</span>
+                                    {isRecurring && (
+                                      <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
+                                        🔄 Ricorrente
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <span className="text-xs text-gray-500">{format(new Date(transaction.date), "HH:mm")}</span>
                                 </div>
                               </TableCell>
@@ -768,7 +829,14 @@ export default function GeneralFinances() {
                                   <span className="capitalize">{transaction.type}</span>
                                 </div>
                               </TableCell>
-                              <TableCell>{transaction.description}</TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span>{transaction.description}</span>
+                                  {isRecurring && (
+                                    <span className="text-xs text-purple-600">Generata automaticamente</span>
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell>
                                 <Badge className={getCategoryBadgeColor(transaction.category)}>
                                   {transaction.category}
