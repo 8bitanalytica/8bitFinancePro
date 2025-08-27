@@ -5,6 +5,7 @@ import {
   insertGeneralTransactionSchema,
   insertPropertySchema,
   insertPropertyProjectSchema,
+  insertPropertyUtilityBlockSchema,
   insertRealEstateTransactionSchema,
   insertDeviceSchema,
   insertDeviceTransactionSchema,
@@ -213,6 +214,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
+  // Property Utility Blocks Routes
+  app.get("/api/property-utility-blocks", async (req, res) => {
+    try {
+      const propertyId = req.query.propertyId ? parseInt(req.query.propertyId as string) : undefined;
+      let utilityBlocks;
+      
+      if (propertyId) {
+        utilityBlocks = await storage.getPropertyUtilityBlocksByProperty(propertyId);
+      } else {
+        utilityBlocks = await storage.getPropertyUtilityBlocks();
+      }
+      
+      console.log("Utility blocks fetched:", utilityBlocks);
+      res.json(utilityBlocks);
+    } catch (error) {
+      console.error("Error fetching utility blocks:", error);
+      res.status(500).json({ message: "Failed to fetch utility blocks" });
+    }
+  });
+
+  app.get("/api/property-utility-blocks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const utilityBlock = await storage.getPropertyUtilityBlock(id);
+      if (!utilityBlock) {
+        return res.status(404).json({ message: "Utility block not found" });
+      }
+      res.json(utilityBlock);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch utility block" });
+    }
+  });
+
+  app.post("/api/property-utility-blocks", async (req, res) => {
+    try {
+      const validatedData = insertPropertyUtilityBlockSchema.parse(req.body);
+      const utilityBlock = await storage.createPropertyUtilityBlock(validatedData);
+      res.status(201).json(utilityBlock);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create utility block" });
+    }
+  });
+
+  app.put("/api/property-utility-blocks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertPropertyUtilityBlockSchema.partial().parse(req.body);
+      const utilityBlock = await storage.updatePropertyUtilityBlock(id, validatedData);
+      if (!utilityBlock) {
+        return res.status(404).json({ message: "Utility block not found" });
+      }
+      res.json(utilityBlock);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update utility block" });
+    }
+  });
+
+  app.delete("/api/property-utility-blocks/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deletePropertyUtilityBlock(id);
+      if (!success) {
+        return res.status(404).json({ message: "Utility block not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete utility block" });
     }
   });
 

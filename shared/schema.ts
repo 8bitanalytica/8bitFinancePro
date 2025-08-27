@@ -45,11 +45,26 @@ export const propertyProjects = pgTable("property_projects", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Property Utility Blocks Table - for tracking utilities like gas, electricity, water, etc.
+export const propertyUtilityBlocks = pgTable("property_utility_blocks", {
+  id: serial("id").primaryKey(),
+  propertyId: integer("property_id").references(() => properties.id),
+  name: text("name").notNull(), // e.g. "Gas", "Elettricità", "Acqua"
+  description: text("description"),
+  type: text("type").notNull(), // "gas", "electricity", "water", "internet", "heating", "other"
+  provider: text("provider"), // e.g. "ENI", "Enel", "Fastweb"
+  accountNumber: text("account_number"), // numero utenza
+  monthlyBudget: decimal("monthly_budget", { precision: 10, scale: 2 }), // budget mensile previsto
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Real Estate Transactions Table
 export const realEstateTransactions = pgTable("real_estate_transactions", {
   id: serial("id").primaryKey(),
   propertyId: integer("property_id").notNull(),
   projectId: integer("project_id").references(() => propertyProjects.id), // Optional project tracking
+  utilityBlockId: integer("utility_block_id").references(() => propertyUtilityBlocks.id), // Optional utility block tracking
   type: text("type").notNull(), // "income" or "expense"
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   description: text("description").notNull(),
@@ -122,6 +137,11 @@ export const insertPropertyProjectSchema = createInsertSchema(propertyProjects).
   ),
 });
 
+export const insertPropertyUtilityBlockSchema = createInsertSchema(propertyUtilityBlocks).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTransactions).omit({
   id: true,
   createdAt: true,
@@ -131,6 +151,7 @@ export const insertRealEstateTransactionSchema = createInsertSchema(realEstateTr
   ),
   receiptUrl: z.string().optional().nullable(),
   projectId: z.number().optional().nullable(),
+  utilityBlockId: z.number().optional().nullable(),
 });
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
@@ -157,6 +178,9 @@ export type InsertProperty = z.infer<typeof insertPropertySchema>;
 
 export type PropertyProject = typeof propertyProjects.$inferSelect;
 export type InsertPropertyProject = z.infer<typeof insertPropertyProjectSchema>;
+
+export type PropertyUtilityBlock = typeof propertyUtilityBlocks.$inferSelect;
+export type InsertPropertyUtilityBlock = z.infer<typeof insertPropertyUtilityBlockSchema>;
 
 export type RealEstateTransaction = typeof realEstateTransactions.$inferSelect;
 export type InsertRealEstateTransaction = z.infer<typeof insertRealEstateTransactionSchema>;

@@ -12,20 +12,23 @@ import { format, subDays } from "date-fns";
 import TransactionModal from "@/components/modals/transaction-modal";
 import PropertyModal from "@/components/modals/property-modal";
 import PropertyProjectModal from "@/components/modals/property-project-modal";
+import { UtilityBlockModal } from "@/components/modals/utility-block-modal";
 import PropertiesSidebar from "@/components/real-estate/properties-sidebar";
 import { useAppSettings } from "@/components/settings/settings";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import type { RealEstateTransaction, Property, PropertyProject } from "@shared/schema";
+import type { RealEstateTransaction, Property, PropertyProject, PropertyUtilityBlock } from "@shared/schema";
 
 export default function RealEstateFinances() {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showPropertyModal, setShowPropertyModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [showUtilityBlockModal, setShowUtilityBlockModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<RealEstateTransaction | undefined>();
   const [editingProperty, setEditingProperty] = useState<Property | undefined>();
   const [editingProject, setEditingProject] = useState<PropertyProject | undefined>();
+  const [editingUtilityBlock, setEditingUtilityBlock] = useState<PropertyUtilityBlock | undefined>();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
@@ -46,6 +49,18 @@ export default function RealEstateFinances() {
   const { data: projects = [], isLoading: projectsLoading, refetch: refetchProjects } = useQuery({
     queryKey: ["/api/property-projects"],
     queryFn: propertyProjectsApi.getAll,
+  });
+
+  const { data: utilityBlocks = [], isLoading: utilityBlocksLoading, refetch: refetchUtilityBlocks } = useQuery({
+    queryKey: ["/api/property-utility-blocks"],
+    queryFn: async () => {
+      const response = await fetch("/api/property-utility-blocks");
+      if (!response.ok) {
+        throw new Error('Failed to fetch utility blocks');
+      }
+      return response.json();
+    },
+    retry: false,
   });
 
   // Dynamic calculations based on displayed transactions
@@ -201,6 +216,22 @@ export default function RealEstateFinances() {
     refetchProjects();
   };
 
+  const handleAddUtilityBlockToProperty = (propertyId: number) => {
+    setEditingUtilityBlock(undefined);
+    setShowUtilityBlockModal(true);
+  };
+
+  const handleEditUtilityBlock = (utilityBlock: PropertyUtilityBlock) => {
+    setEditingUtilityBlock(utilityBlock);
+    setShowUtilityBlockModal(true);
+  };
+
+  const handleUtilityBlockModalClose = () => {
+    setShowUtilityBlockModal(false);
+    setEditingUtilityBlock(undefined);
+    refetchUtilityBlocks();
+  };
+
   const handlePropertySelect = (propertyId: number | null) => {
     setSelectedPropertyId(propertyId);
     setVisibleTransactions(30);
@@ -223,11 +254,16 @@ export default function RealEstateFinances() {
 
   const selectedProperty = selectedPropertyId ? properties.find(p => p.id === selectedPropertyId) : null;
   
-  // Get projects for selected property
+  // Get projects and utility blocks for selected property
   const selectedPropertyProjects = useMemo(() => {
     if (!selectedPropertyId) return [];
     return projects.filter(project => project.propertyId === selectedPropertyId);
   }, [projects, selectedPropertyId]);
+  
+  const selectedPropertyUtilityBlocks = useMemo(() => {
+    if (!selectedPropertyId) return [];
+    return utilityBlocks.filter(block => block.propertyId === selectedPropertyId);
+  }, [utilityBlocks, selectedPropertyId]);
 
   return (
     <div className="flex h-full">
@@ -261,17 +297,28 @@ export default function RealEstateFinances() {
               </p>
             </div>
             
-            {/* Add Project Button - Only shown when a property is selected */}
+            {/* Add Buttons - Only shown when a property is selected */}
             {selectedProperty && (
-              <Button 
-                onClick={() => handleAddProjectToProperty(selectedProperty.id)} 
-                size="sm" 
-                variant="outline" 
-                className="text-purple-600 border-purple-200 hover:bg-purple-50"
-              >
-                <FolderOpen className="h-4 w-4 mr-2" />
-                Add Project
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => handleAddProjectToProperty(selectedProperty.id)} 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                >
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Add Project
+                </Button>
+                <Button 
+                  onClick={() => handleAddUtilityBlockToProperty(selectedProperty.id)} 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Utility
+                </Button>
+              </div>
             )}
           </div>
 
@@ -476,6 +523,132 @@ export default function RealEstateFinances() {
             </Card>
           )}
 
+          {/* Utility Blocks Section - Only shown when a property is selected and utility blocks exist */}
+          {selectedProperty && selectedPropertyUtilityBlocks.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-blue-600" />
+                  Utility Blocks for {selectedProperty.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {selectedPropertyUtilityBlocks.map((block) => {
+                    // Filter transactions for this specific utility block
+                    const blockTransactions = displayedTransactions.filter(t => t.utilityBlockId === block.id);
+                    const monthlyExpenses = blockTransactions
+                      .filter(t => t.type === 'expense')
+                      .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                    const monthlyBudget = block.monthlyBudget ? parseFloat(block.monthlyBudget) : 0;
+                    const budgetUsed = monthlyBudget > 0 ? (monthlyExpenses / monthlyBudget) * 100 : 0;
+
+                    return (
+                      <div key={block.id} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{block.name}</h4>
+                            <p className="text-sm text-gray-600">{block.type}</p>
+                            {block.provider && (
+                              <p className="text-xs text-gray-500">{block.provider}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant="secondary" 
+                              className={cn(
+                                "text-xs",
+                                block.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                              )}
+                            >
+                              {block.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditUtilityBlock(block)}
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Utility Budget and Expenses */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <p className="text-xs text-gray-500">Monthly Budget</p>
+                            <p className="font-semibold text-blue-600">
+                              {block.monthlyBudget ? formatCurrency(parseFloat(block.monthlyBudget)) : 'No budget'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">This Month</p>
+                            <p className="font-semibold text-red-600">
+                              {formatCurrency(monthlyExpenses)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Budget Progress Bar */}
+                        {monthlyBudget > 0 && (
+                          <div className="mb-4">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                              <span>Budget Usage</span>
+                              <span>{budgetUsed.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className={cn(
+                                  "h-2 rounded-full transition-all",
+                                  budgetUsed > 100 ? "bg-red-500" :
+                                  budgetUsed > 80 ? "bg-yellow-500" : "bg-green-500"
+                                )}
+                                style={{ width: `${Math.min(budgetUsed, 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Recent Utility Transactions */}
+                        {blockTransactions.length > 0 && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 mb-2">Recent Expenses</h5>
+                            <div className="space-y-2">
+                              {blockTransactions.slice(0, 2).map((transaction) => (
+                                <div key={transaction.id} className="flex justify-between items-center text-sm">
+                                  <div>
+                                    <p className="font-medium">{transaction.description}</p>
+                                    <p className="text-gray-500">{format(new Date(transaction.date), "MMM dd")}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-red-600">
+                                      -{formatCurrency(parseFloat(transaction.amount))}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                              {blockTransactions.length > 2 && (
+                                <p className="text-xs text-gray-500 text-center pt-2">
+                                  +{blockTransactions.length - 2} more expenses
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {blockTransactions.length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            <p className="text-sm">No expenses recorded yet</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Filters and Search */}
           <div className="flex gap-4">
             <div className="flex-1">
@@ -656,6 +829,14 @@ export default function RealEstateFinances() {
           propertyId={selectedPropertyId || undefined}
         />
       )}
+      
+      <UtilityBlockModal
+        isOpen={showUtilityBlockModal}
+        onClose={handleUtilityBlockModalClose}
+        utilityBlock={editingUtilityBlock}
+        properties={properties}
+        propertyId={selectedPropertyId || undefined}
+      />
     </div>
   );
 }

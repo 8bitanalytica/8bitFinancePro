@@ -5,6 +5,8 @@ import {
   InsertProperty,
   PropertyProject,
   InsertPropertyProject,
+  PropertyUtilityBlock,
+  InsertPropertyUtilityBlock,
   RealEstateTransaction,
   InsertRealEstateTransaction,
   Device,
@@ -18,6 +20,7 @@ import {
   generalTransactions,
   properties,
   propertyProjects,
+  propertyUtilityBlocks,
   realEstateTransactions,
   devices,
   deviceTransactions,
@@ -51,6 +54,14 @@ export interface IStorage {
   createPropertyProject(project: InsertPropertyProject): Promise<PropertyProject>;
   updatePropertyProject(id: number, project: Partial<InsertPropertyProject>): Promise<PropertyProject | undefined>;
   deletePropertyProject(id: number): Promise<boolean>;
+  
+  // Property Utility Blocks
+  getPropertyUtilityBlocks(): Promise<PropertyUtilityBlock[]>;
+  getPropertyUtilityBlocksByProperty(propertyId: number): Promise<PropertyUtilityBlock[]>;
+  getPropertyUtilityBlock(id: number): Promise<PropertyUtilityBlock | undefined>;
+  createPropertyUtilityBlock(utilityBlock: InsertPropertyUtilityBlock): Promise<PropertyUtilityBlock>;
+  updatePropertyUtilityBlock(id: number, utilityBlock: Partial<InsertPropertyUtilityBlock>): Promise<PropertyUtilityBlock | undefined>;
+  deletePropertyUtilityBlock(id: number): Promise<boolean>;
   
   // Real Estate Transactions
   getRealEstateTransactions(): Promise<RealEstateTransaction[]>;
@@ -104,6 +115,7 @@ export class MemStorage implements IStorage {
   private generalTransactions: Map<number, GeneralTransaction>;
   private properties: Map<number, Property>;
   private propertyProjects: Map<number, PropertyProject>;
+  private propertyUtilityBlocks: Map<number, PropertyUtilityBlock>;
   private realEstateTransactions: Map<number, RealEstateTransaction>;
   private devices: Map<number, Device>;
   private deviceTransactions: Map<number, DeviceTransaction>;
@@ -113,6 +125,7 @@ export class MemStorage implements IStorage {
   private currentGeneralTransactionId: number;
   private currentPropertyId: number;
   private currentPropertyProjectId: number;
+  private currentPropertyUtilityBlockId: number;
   private currentRealEstateTransactionId: number;
   private currentDeviceId: number;
   private currentDeviceTransactionId: number;
@@ -124,6 +137,7 @@ export class MemStorage implements IStorage {
     this.generalTransactions = new Map();
     this.properties = new Map();
     this.propertyProjects = new Map();
+    this.propertyUtilityBlocks = new Map();
     this.realEstateTransactions = new Map();
     this.devices = new Map();
     this.deviceTransactions = new Map();
@@ -133,6 +147,7 @@ export class MemStorage implements IStorage {
     this.currentGeneralTransactionId = 1;
     this.currentPropertyId = 1;
     this.currentPropertyProjectId = 1;
+    this.currentPropertyUtilityBlockId = 1;
     this.currentRealEstateTransactionId = 1;
     this.currentDeviceId = 1;
     this.currentDeviceTransactionId = 1;
@@ -279,6 +294,51 @@ export class MemStorage implements IStorage {
     return this.propertyProjects.delete(id);
   }
 
+  // Property Utility Blocks
+  async getPropertyUtilityBlocks(): Promise<PropertyUtilityBlock[]> {
+    return Array.from(this.propertyUtilityBlocks.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getPropertyUtilityBlocksByProperty(propertyId: number): Promise<PropertyUtilityBlock[]> {
+    return Array.from(this.propertyUtilityBlocks.values())
+      .filter(block => block.propertyId === propertyId)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getPropertyUtilityBlock(id: number): Promise<PropertyUtilityBlock | undefined> {
+    return this.propertyUtilityBlocks.get(id);
+  }
+
+  async createPropertyUtilityBlock(insertUtilityBlock: InsertPropertyUtilityBlock): Promise<PropertyUtilityBlock> {
+    const id = this.currentPropertyUtilityBlockId++;
+    const utilityBlock: PropertyUtilityBlock = {
+      ...insertUtilityBlock,
+      id,
+      createdAt: new Date(),
+      description: insertUtilityBlock.description ?? null,
+      propertyId: insertUtilityBlock.propertyId ?? null,
+      provider: insertUtilityBlock.provider ?? null,
+      accountNumber: insertUtilityBlock.accountNumber ?? null,
+      monthlyBudget: insertUtilityBlock.monthlyBudget ?? null,
+      isActive: insertUtilityBlock.isActive ?? true,
+    };
+    this.propertyUtilityBlocks.set(id, utilityBlock);
+    return utilityBlock;
+  }
+
+  async updatePropertyUtilityBlock(id: number, updates: Partial<InsertPropertyUtilityBlock>): Promise<PropertyUtilityBlock | undefined> {
+    const existing = this.propertyUtilityBlocks.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updates };
+    this.propertyUtilityBlocks.set(id, updated);
+    return updated;
+  }
+
+  async deletePropertyUtilityBlock(id: number): Promise<boolean> {
+    return this.propertyUtilityBlocks.delete(id);
+  }
+
   // Real Estate Transactions
   async getRealEstateTransactions(): Promise<RealEstateTransaction[]> {
     return Array.from(this.realEstateTransactions.values()).sort((a, b) => 
@@ -304,6 +364,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
       receiptUrl: insertTransaction.receiptUrl ?? null,
       projectId: insertTransaction.projectId ?? null,
+      utilityBlockId: insertTransaction.utilityBlockId ?? null,
     };
     this.realEstateTransactions.set(id, transaction);
     return transaction;
@@ -722,6 +783,35 @@ export class DatabaseStorage implements IStorage {
 
   async deletePropertyProject(id: number): Promise<boolean> {
     const result = await db.delete(propertyProjects).where(eq(propertyProjects.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Property Utility Blocks
+  async getPropertyUtilityBlocks(): Promise<PropertyUtilityBlock[]> {
+    return await db.select().from(propertyUtilityBlocks).orderBy(propertyUtilityBlocks.name);
+  }
+
+  async getPropertyUtilityBlocksByProperty(propertyId: number): Promise<PropertyUtilityBlock[]> {
+    return await db.select().from(propertyUtilityBlocks).where(eq(propertyUtilityBlocks.propertyId, propertyId)).orderBy(propertyUtilityBlocks.name);
+  }
+
+  async getPropertyUtilityBlock(id: number): Promise<PropertyUtilityBlock | undefined> {
+    const [result] = await db.select().from(propertyUtilityBlocks).where(eq(propertyUtilityBlocks.id, id));
+    return result;
+  }
+
+  async createPropertyUtilityBlock(utilityBlock: InsertPropertyUtilityBlock): Promise<PropertyUtilityBlock> {
+    const [result] = await db.insert(propertyUtilityBlocks).values(utilityBlock).returning();
+    return result;
+  }
+
+  async updatePropertyUtilityBlock(id: number, utilityBlock: Partial<InsertPropertyUtilityBlock>): Promise<PropertyUtilityBlock | undefined> {
+    const [result] = await db.update(propertyUtilityBlocks).set(utilityBlock).where(eq(propertyUtilityBlocks.id, id)).returning();
+    return result;
+  }
+
+  async deletePropertyUtilityBlock(id: number): Promise<boolean> {
+    const result = await db.delete(propertyUtilityBlocks).where(eq(propertyUtilityBlocks.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
