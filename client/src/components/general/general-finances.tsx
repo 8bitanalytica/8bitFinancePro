@@ -27,6 +27,7 @@ export default function GeneralFinances() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [visibleTransactions, setVisibleTransactions] = useState(30);
   const [activeTab, setActiveTab] = useState("transactions");
+  const [dateFilter, setDateFilter] = useState<string>("all");
   const settings = useAppSettings();
   const { toast } = useToast();
 
@@ -53,18 +54,44 @@ export default function GeneralFinances() {
       filtered = filtered.filter(t => new Date(t.date) >= lastMonth);
     }
 
-    // Apply category and search filters
+    // Apply category, search and date filters
     filtered = filtered.filter(transaction => {
       const matchesCategory = !categoryFilter || categoryFilter === "all" || transaction.category === categoryFilter;
       const matchesSearch = !searchQuery || 
         transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         transaction.category.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+      
+      // Date filter logic
+      let matchesDate = true;
+      if (dateFilter !== "all") {
+        const transactionDate = new Date(transaction.date);
+        const now = new Date();
+        
+        if (dateFilter === "this-month") {
+          matchesDate = transactionDate.getMonth() === now.getMonth() && 
+                       transactionDate.getFullYear() === now.getFullYear();
+        } else if (dateFilter === "last-month") {
+          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          matchesDate = transactionDate.getMonth() === lastMonth.getMonth() && 
+                       transactionDate.getFullYear() === lastMonth.getFullYear();
+        } else if (dateFilter === "this-year") {
+          matchesDate = transactionDate.getFullYear() === now.getFullYear();
+        } else if (dateFilter === "last-year") {
+          matchesDate = transactionDate.getFullYear() === now.getFullYear() - 1;
+        } else if (dateFilter.includes("-")) {
+          // Format: "2024-08" for specific month-year
+          const [year, month] = dateFilter.split("-").map(Number);
+          matchesDate = transactionDate.getFullYear() === year && 
+                       transactionDate.getMonth() === month - 1;
+        }
+      }
+      
+      return matchesCategory && matchesSearch && matchesDate;
     });
 
     // Sort by date (newest first)
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, selectedAccountId, categoryFilter, searchQuery]);
+  }, [transactions, selectedAccountId, categoryFilter, searchQuery, dateFilter]);
 
   // Dynamic statistics based on displayed transactions - now grouped by currency
   const statistics = useMemo(() => {
@@ -633,6 +660,30 @@ export default function GeneralFinances() {
                       className="pl-10"
                     />
                   </div>
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Filter by date" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      <SelectItem value="this-month">This Month</SelectItem>
+                      <SelectItem value="last-month">Last Month</SelectItem>
+                      <SelectItem value="this-year">This Year</SelectItem>
+                      <SelectItem value="last-year">Last Year</SelectItem>
+                      {(() => {
+                        // Generate recent months
+                        const months = [];
+                        const now = new Date();
+                        for (let i = 0; i < 12; i++) {
+                          const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                          const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                          const label = format(date, "MMMM yyyy");
+                          months.push(<SelectItem key={value} value={value}>{label}</SelectItem>);
+                        }
+                        return months;
+                      })()}
+                    </SelectContent>
+                  </Select>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                     <SelectTrigger className="w-full sm:w-[180px]">
                       <SelectValue placeholder="All categories" />
