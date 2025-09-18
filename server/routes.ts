@@ -101,6 +101,26 @@ async function generateFutureInstances(recurringTransaction: any): Promise<void>
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for container monitoring
+  app.get("/health", async (req, res) => {
+    try {
+      // Basic health check - you can add more sophisticated checks here
+      // like database connectivity, external services, etc.
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // General Transactions Routes
   app.get("/api/general-transactions", async (req, res) => {
     try {
